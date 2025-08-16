@@ -1,0 +1,8 @@
+F:\Script\Rust\MythicMobsEditor\target\debug\deps\arboard-6cb233b6ec6b8a3e.d: C:\Users\PC\ MASTER\ RACE\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\arboard-3.6.0\src\lib.rs C:\Users\PC\ MASTER\ RACE\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\arboard-3.6.0\src\common.rs C:\Users\PC\ MASTER\ RACE\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\arboard-3.6.0\src\platform\mod.rs C:\Users\PC\ MASTER\ RACE\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\arboard-3.6.0\src\platform\windows.rs
+
+F:\Script\Rust\MythicMobsEditor\target\debug\deps\libarboard-6cb233b6ec6b8a3e.rmeta: C:\Users\PC\ MASTER\ RACE\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\arboard-3.6.0\src\lib.rs C:\Users\PC\ MASTER\ RACE\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\arboard-3.6.0\src\common.rs C:\Users\PC\ MASTER\ RACE\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\arboard-3.6.0\src\platform\mod.rs C:\Users\PC\ MASTER\ RACE\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\arboard-3.6.0\src\platform\windows.rs
+
+C:\Users\PC\ MASTER\ RACE\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\arboard-3.6.0\src\lib.rs:
+C:\Users\PC\ MASTER\ RACE\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\arboard-3.6.0\src\common.rs:
+C:\Users\PC\ MASTER\ RACE\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\arboard-3.6.0\src\platform\mod.rs:
+C:\Users\PC\ MASTER\ RACE\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\arboard-3.6.0\src\platform\windows.rs:
