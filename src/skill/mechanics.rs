@@ -161,7 +161,7 @@ pub enum Mechanic {
         /// Duration of the effect in ticks.
         duration: u32,
         /// The shape of the effect.
-        shape: BlockMaskShape,
+        shape: Shape,
         /// Mask no air blocks only.
         no_air: bool,
         /// Mask air blocks only.
@@ -176,7 +176,7 @@ pub enum Mechanic {
         /// The radius of the blockunmask effect.
         radius: u32,
         /// The shape of the effect.
-        shape: String,
+        shape: Shape,
     },
 
     /// Triggers a block physics update at the target location
@@ -4402,7 +4402,9 @@ pub enum WeatherType {
     Stormy,
 }
 
-#[derive(Serialize, Deserialize, strum::Display, Clone, Default, PartialEq)]
+#[derive(
+    Serialize, Deserialize, strum::Display, Clone, Default, PartialEq, strum::VariantArray,
+)]
 pub enum Shape {
     #[strum(to_string = "sphere")]
     Sphere,
@@ -4471,13 +4473,6 @@ impl std::fmt::Display for MythicOption<ModelEngineModel> {
         }
         write!(f, "")
     }
-}
-
-#[derive(Serialize, Deserialize, strum::Display, Clone, PartialEq, Default)]
-pub enum BlockMaskShape {
-    #[default]
-    Sphere,
-    Cube,
 }
 
 #[derive(Serialize, Deserialize, strum::Display, Clone, PartialEq)]

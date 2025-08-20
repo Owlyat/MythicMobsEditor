@@ -552,11 +552,11 @@ fn process_mechanic_ui(ui: &mut egui::Ui, mechanic: &mut Mechanic) {
             });
             ui.horizontal(|ui| {
                 ui.label("Shape").on_hover_ui(|ui| {ui.label("The shape of the effect.");});
-                egui::ComboBox::from_id_salt("Shape Dropdown Menu")
-                    .selected_text(shape.to_string())
-                    .show_ui(ui, |ui| {
-                        ui.selectable_value(shape, crate::skill::mechanics::BlockMaskShape::Sphere, "Sphere");
-                        ui.selectable_value(shape, crate::skill::mechanics::BlockMaskShape::Cube, "Cube");
+                egui::ComboBox::new("BlockMask_Shape_ComboBox", "").selected_text(shape.to_string()).show_ui(ui, |ui| {
+                    use crate::skill::mechanics::Shape;
+                    Shape::VARIANTS.iter().for_each(|v| {
+                        ui.selectable_value(shape, v.clone(), v.to_string());
+                    });
                 });
             });
             ui.horizontal(|ui| {
@@ -572,7 +572,25 @@ fn process_mechanic_ui(ui: &mut egui::Ui, mechanic: &mut Mechanic) {
                 ui.checkbox(occlude, "Occlude_Checkbox");
             });
         },
-        Mechanic::BlockUnmask { radius, shape } => (),
+        Mechanic::BlockUnmask { radius, shape } => {
+            ui.horizontal(|ui|{
+                ui.label("Radius").on_hover_ui(|ui| {
+                    ui.label("The radius of the blockunmask effect.");
+                });
+                ui.add(egui::DragValue::new(radius));
+            });
+            ui.horizontal(|ui| {
+                ui.label("Shape").on_hover_ui(|ui| {
+                    ui.label("The shape of the effect.");
+                } );
+                egui::ComboBox::new("BlockUnmask_Shape_ComboBox", "").selected_text(shape.to_string()).show_ui(ui, |ui| {
+                    use crate::skill::mechanics::Shape;
+                    Shape::VARIANTS.iter().for_each(|v| {
+                        ui.selectable_value(shape, v.clone(), v.to_string());
+                    });
+                });
+            });
+        },
         Mechanic::BlockPhysics => (),
         Mechanic::BlockWave {
             material,
@@ -589,7 +607,69 @@ fn process_mechanic_ui(ui: &mut egui::Ui, mechanic: &mut Mechanic) {
             noise,
             hide_source_block,
             ignore_air,
-        } => (),
+        } => {
+            ui.horizontal(|ui| {
+                ui.label("Material").on_hover_ui(|ui| {ui.label("The material used for the blockwave.");});
+                ui.text_edit_singleline(material);
+            });
+            ui.horizontal(|ui| {
+                ui.label("Radius").on_hover_ui(|ui| {ui.label("The radius of the blockwave effect.");});
+                ui.add(egui::DragValue::new(radius).speed(1));
+            });
+            ui.horizontal(|ui| {
+                ui.label("Radius Y").on_hover_ui(|ui| {ui.label("The y radius of the blockwave effect.");});
+                ui.add(egui::DragValue::new(radius_y).speed(1));
+            });
+            ui.horizontal(|ui| {
+                ui.label("Duration").on_hover_ui(|ui| {ui.label("Duration of the effect in ticks.");});
+                ui.add(egui::DragValue::new(duration).speed(1));
+            });
+            ui.horizontal(|ui| {
+                ui.label("Shape").on_hover_ui(|ui| {ui.label("The shape of the effect.");});
+                egui::ComboBox::new("BlockWave_Shape_ComboBox", "").selected_text(shape.to_string()).show_ui(ui, |ui| {
+                    use crate::skill::mechanics::Shape;
+                    Shape::VARIANTS.iter().for_each(|v| {
+                        ui.selectable_value(shape, v.clone(), v.to_string());
+                    });
+                });
+            });
+            ui.horizontal(|ui| {
+                ui.label("Velocity").on_hover_ui(|ui| {ui.label("The speed of the effect.");});
+                ui.add(egui::DragValue::new(velocity).speed(1.0));
+            });
+            ui.horizontal(|ui| {
+                ui.label("Horizontal Velocity").on_hover_ui(|ui| {ui.label("The speed of the effect in the horizontal direction.");});
+                ui.add(egui::DragValue::new(horizontal_velocity));
+            });
+            ui.horizontal(|ui| {
+                ui.label("Specific Velocities").on_hover_ui(|ui|{ui.label("Whether to make use of the specific velocities.");});
+                ui.checkbox(specific_velocities, "");
+            });
+            ui.horizontal(|ui| {
+                ui.label("Velocity X").on_hover_ui(|ui| {ui.label("The speed of the effect on the x axis.");});
+                ui.add(egui::DragValue::new(velocity_x).speed(1));
+            });
+            ui.horizontal(|ui| {
+                ui.label("Velocity Y").on_hover_ui(|ui| {ui.label("The speed of the effect on the y axis.");});
+                ui.add(egui::DragValue::new(velocity_y).speed(1));
+            });
+            ui.horizontal(|ui| {
+                ui.label("Velocity Z").on_hover_ui(|ui| {ui.label("The speed of the effect on the z axis.");});
+                ui.add(egui::DragValue::new(velocity_z).speed(1));
+            });
+            ui.horizontal(|ui| {
+                ui.label("Noise").on_hover_ui(|ui| {ui.label("The noise of the effect.");});
+                ui.add(egui::DragValue::new(noise).speed(1)); 
+            });
+            ui.horizontal(|ui| {
+                ui.label("Hide Source Block").on_hover_ui(|ui| {ui.label("Whether to hide the source block.");});
+                ui.checkbox(hide_source_block, "");
+            });
+            ui.horizontal(|ui| {
+                ui.label("Ignore Air").on_hover_ui(|ui| {ui.label("Whether air blocks should be ignored.");});
+                ui.checkbox(ignore_air, "");
+            });
+        },
         Mechanic::BloodyScreen { duration, cancel } => (),
         Mechanic::BoneMeal { block_face } => (),
         Mechanic::BossBorder { radius } => (),
