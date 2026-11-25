@@ -25,20 +25,20 @@ where
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             MythicOption::None => write!(f, ""),
-            MythicOption::Some(pre, t, suf) => write!(f, "{pre}{t}{suf}"),
+            MythicOption::Some(pre, t, suf) => write!(f, "{}{}{}", pre, t.to_string(), suf),
         }
     }
 }
 
 #[derive(Serialize, Deserialize, Clone, Default, PartialEq)]
 pub struct Xyz {
-    x: i32,
-    y: i32,
-    z: i32,
+    pub x: i32,
+    pub y: i32,
+    pub z: i32,
 }
 impl std::fmt::Display for Xyz {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{},{},{}", self.x, self.y, self.z)
+        write!(f, "x={};y={};z={}", self.x, self.y, self.z)
     }
 }
 
@@ -51,6 +51,7 @@ impl std::fmt::Display for Xyz {
     strum::EnumIter,
     PartialEq,
 )]
+
 pub enum Mechanic {
     /// Activates a MythicMobs spawner at the targeted location
     #[strum(to_string = "- activatespawner{{spawner={spawner}}}")]
@@ -125,7 +126,35 @@ pub enum Mechanic {
         can_pickup: bool,
     },
 
+    /// Sets the base value of the targeted entity's attribute
+    #[strum(to_string = "- attribute{{attribute={attribute};amount={amount}{duration}}}")]
+    Attribute {
+        /// The attribute to set
+        attribute: String,
+        /// The amount of the attribute
+        amount: f32,
+        /// The duration of the attribute
+        duration: MythicOption<u32>,
+    },
+
     /// Adds an attribute modifier to the attributable target
+    #[strum(
+        to_string = "- attributeModifier{{attribute={attribute};operation={operation};name={name};amount={amount}{duration}}}"
+    )]
+    AttributeModifier {
+        /// The attribute to modify
+        attribute: String,
+        /// The operation to perform
+        operation: AttributeOperation,
+        /// The name of the modifier
+        name: String,
+        /// The modifier of the attribute
+        amount: f32,
+        /// The duration of the attribute
+        duration: MythicOption<u32>,
+    },
+
+    /// Removes an aura from the target entity
     #[strum(to_string = "- auraremove{{aura={aura_name};stacks={stacks}}}")]
     AuraRemove {
         /// The name of the aura to remove.
@@ -135,6 +164,47 @@ pub enum Mechanic {
     },
 
     /// Creates a custom boss bar on the casting mob
+    #[strum(
+        to_string = "- barCreate{{name={name};display={display};value={value};color={color};style={style}}}"
+    )]
+    BarCreate {
+        /// The name of the bossbar
+        name: String,
+        /// The text displayed on the bar
+        display: String,
+        /// How filled the bossbar is. Must be between 0.0 and 1.0
+        value: f32,
+        /// The color of the bossbar
+        color: BarColor,
+        /// The style of the bossbar
+        style: BarStyle,
+    },
+
+    /// Removes a custom boss bar on the casting mob
+    #[strum(to_string = "- barRemove{{name={name}}}")]
+    BarRemove {
+        /// The name of the bossbar to remove
+        name: String,
+    },
+
+    /// Modifies a custom boss bar on the casting mob
+    #[strum(
+        to_string = "- barSet{{name={name};display={display};value={value};color={color};style={style}}}"
+    )]
+    BarSet {
+        /// The name of the bossbar to modify
+        name: String,
+        /// The text displayed on the bar
+        display: String,
+        /// How filled the bossbar is. Must be between 0.0 and 1.0
+        value: f32,
+        /// The color of the bossbar
+        color: BarColor,
+        /// The style of the bossbar
+        style: BarStyle,
+    },
+
+    /// Blacks out the target's screen for the duration
     #[strum(to_string = "- blackscreen{{d={duration}}}")]
     BlackScreen {
         /// The duration of the black screen effect.
@@ -289,6 +359,10 @@ pub enum Mechanic {
     /// Clears the experience levels for the targeted players
     #[strum(to_string = "- clearexperiencelevels")]
     ClearExperienceLevels,
+
+    /// Forces the target of the mechanic to reset its current target
+    #[strum(to_string = "- clearTarget")]
+    ClearTarget,
 
     /// Gives experience levels to the targeted players
     #[strum(to_string = "- giveexperiencelevels{{a={amount}}}")]
@@ -613,6 +687,10 @@ pub enum Mechanic {
         /// If greater than 0, will undo the paste operation after that amount of ticks has elapsed.
         duration: u32,
     },
+
+    /// Applies an aura that makes the target run around in fear (deprecated, use the fear aura component)
+    #[strum(to_string = "- fear")]
+    Fear,
 
     /// Feeds the target player
     #[strum(to_string = "- feed{{a={amount};s={saturation};o={overfeed}}}")]
@@ -1028,6 +1106,13 @@ pub enum Mechanic {
         y: f32,
         /// The z-coordinate to move the pin to
         z: f32,
+    },
+
+    /// Opens a custom menu for the target player
+    #[strum(to_string = "- openCustomMenu{{menu={menu}}}")]
+    OpenCustomMenu {
+        /// The menu to open
+        menu: String,
     },
 
     /// Opens the trades of the casting villager to the target player
@@ -1523,6 +1608,15 @@ pub enum Mechanic {
         collidable: bool,
     },
 
+    /// Sets a specific slot of the opened custom menu to the specified button
+    #[strum(to_string = "- setCustomMenuButton{{slot={slot};icon={icon}}}")]
+    SetCustomMenuButton {
+        /// The slot to modify
+        slot: u32,
+        /// The button to set on the slot
+        icon: String,
+    },
+
     /// Sets the position of the dragon's podium at the target location
     #[strum(to_string = "- setdragonpodium{{podium={podium}}}")]
     SetDragonPodium {
@@ -1784,6 +1878,13 @@ pub enum Mechanic {
     SetStance {
         /// The stance to set
         stance: String,
+    },
+
+    /// Sets the archetype of the target sulfur cube, which changes the block inside it
+    #[strum(to_string = "- setSulfurCubeArchetype{{archetype={archetype}}}")]
+    SetSulfurCubeArchetype {
+        /// The archetype of the sulfur cube
+        archetype: SulfurCubeArchetype,
     },
 
     /// Applies an absorb shield to the target entity
@@ -2113,6 +2214,17 @@ pub enum Mechanic {
         level: ThunderLevel,
     },
 
+    #[strum(to_string = "- tickRate{{rate={rate};duration={duration}{reset}}}")]
+    /// Slows down the target, or stops it at rate=0 (requires 1.20.4)
+    TickRate {
+        /// The tick rate of the target, from 1 (slowest) to 20 (normal). 0 stops the target
+        rate: f32,
+        /// How long the change lasts. 0 keeps it until a reset
+        duration: u32,
+        /// Puts the target back to normal
+        reset: MythicOption<bool>,
+    },
+
     #[strum(to_string = "- togglelever{{duration={duration};{location}{x}{y}{z}}}")]
     /// Toggles a lever at the target location
     ToggleLever {
@@ -2235,11 +2347,38 @@ impl Mechanic {
                 remove_delay: _,
                 can_pickup: _,
             } => "Fires a volley of arrows",
+            Mechanic::Attribute {
+                attribute: _,
+                amount: _,
+                duration: _,
+            } => "Sets the base value of the targeted entity's attribute",
+            Mechanic::AttributeModifier {
+                attribute: _,
+                operation: _,
+                name: _,
+                amount: _,
+                duration: _,
+            } => "Adds an attribute modifier to the attributable target",
             Mechanic::AuraRemove {
                 aura_name: _,
                 stacks: _,
-            } => "Adds an attribute modifier to the attributable target",
-            Mechanic::BlackScreen { duration: _ } => "Creates a custom boss bar on the casting mob",
+            } => "Removes an aura from the target entity",
+            Mechanic::BarCreate {
+                name: _,
+                display: _,
+                value: _,
+                color: _,
+                style: _,
+            } => "Creates a custom boss bar on the casting mob",
+            Mechanic::BarRemove { name: _ } => "Removes a custom boss bar on the casting mob",
+            Mechanic::BarSet {
+                name: _,
+                display: _,
+                value: _,
+                color: _,
+                style: _,
+            } => "Modifies a custom boss bar on the casting mob",
+            Mechanic::BlackScreen { duration: _ } => "Blacks out the target's screen for the duration",
             Mechanic::BlockDestabilize => {
                 "Causes the targeted blocks to fall, as if affected by gravity"
             }
@@ -2287,7 +2426,7 @@ impl Mechanic {
                 aura_name: _,
                 on_bounce_skill: _,
                 cancel_event: _,
-            } => "Creates an inescapable border around the mob",
+            } => "Applies an aura to the target that makes it bouncy",
             Mechanic::BreakBlock {
                 do_drops: _,
                 do_effect: _,
@@ -2304,6 +2443,7 @@ impl Mechanic {
             Mechanic::ClearExperienceLevels => {
                 " Clears the experience levels for the targeted players"
             }
+            Mechanic::ClearTarget => "Forces the target of the mechanic to reset its current target",
             Mechanic::GiveExperienceLevels { amount: _ } => {
                 "Gives experience levels to the targeted players"
             }
@@ -2429,6 +2569,9 @@ impl Mechanic {
                 blocks_per_tick: _,
                 duration: _,
             } => "Pastes a Schematic using FAWE (Fast Async World Edit)",
+            Mechanic::Fear => {
+                "Applies an aura that makes the target run around in fear (deprecated, use the fear aura component)"
+            }
             Mechanic::Feed {
                 amount: _,
                 saturation: _,
@@ -2587,6 +2730,7 @@ impl Mechanic {
             Mechanic::MountMe { entity: _ } => "Forces the targeted entity to mount the caster",
             Mechanic::MountTarget { entity: _ } => "Mounts the target",
             Mechanic::MovePin { x: _, y: _, z: _ } => "Moves the given pin to the target location",
+            Mechanic::OpenCustomMenu { menu: _ } => "Opens a custom menu for the target player",
             Mechanic::OpenTrades => "Opens the trades of the casting villager to the target player",
             Mechanic::Oxygen { amount: _ } => "Gives oxygen to a player target",
             Mechanic::Particle {
@@ -2764,6 +2908,9 @@ impl Mechanic {
             Mechanic::SetCollidable { collidable: _ } => {
                 "Sets if the target should have a collidable hitbox or not"
             }
+            Mechanic::SetCustomMenuButton { slot: _, icon: _ } => {
+                "Sets a specific slot of the opened custom menu to the specified button"
+            }
             Mechanic::SetDragonPodium { podium: _ } => {
                 "Sets the position of the dragon's podium at the target location"
             }
@@ -2837,6 +2984,9 @@ impl Mechanic {
             } => "Sets the scoreboard value of a dummy player",
             Mechanic::SetSpeed { speed: _ } => "Sets the target entity's speed attribute",
             Mechanic::SetStance { stance: _ } => "Sets the stance of the target mob",
+            Mechanic::SetSulfurCubeArchetype { archetype: _ } => {
+                "Sets the archetype of the target sulfur cube, which changes the block inside it"
+            }
             Mechanic::Shield => "Applies an absorb shield to the target entity",
             Mechanic::ShieldBreak => {
                 "Forces the player to lower their shield and puts it on cooldown"
@@ -2961,6 +3111,11 @@ impl Mechanic {
             Mechanic::ThunderLevel { level: _ } => {
                 "Creates a client-side, per-player rainless storm"
             }
+            Mechanic::TickRate {
+                rate: _,
+                duration: _,
+                reset: _,
+            } => "Slows down the target, or stops it at rate=0 (requires 1.20.4)",
             Mechanic::ToggleLever {
                 location: _,
                 duration: _,
@@ -3037,10 +3192,37 @@ impl Mechanic {
                 remove_delay: _,
                 can_pickup: _,
             } => "Arrow Volley",
+            Mechanic::Attribute {
+                attribute: _,
+                amount: _,
+                duration: _,
+            } => "Attribute",
+            Mechanic::AttributeModifier {
+                attribute: _,
+                operation: _,
+                name: _,
+                amount: _,
+                duration: _,
+            } => "Attribute Modifier",
             Mechanic::AuraRemove {
                 aura_name: _,
                 stacks: _,
             } => "Aura Remove",
+            Mechanic::BarCreate {
+                name: _,
+                display: _,
+                value: _,
+                color: _,
+                style: _,
+            } => "Bar Create",
+            Mechanic::BarRemove { name: _ } => "Bar Remove",
+            Mechanic::BarSet {
+                name: _,
+                display: _,
+                value: _,
+                color: _,
+                style: _,
+            } => "Bar Set",
             Mechanic::BlackScreen { duration: _ } => "BlackScreen",
             Mechanic::BlockDestabilize => "BlockDestabilize",
             Mechanic::BlockMask {
@@ -3100,6 +3282,7 @@ impl Mechanic {
             } => "BreakBlockAndGiveItem",
             Mechanic::ClearExperience => "ClearExperience",
             Mechanic::ClearExperienceLevels => "ClearExperienceLevels",
+            Mechanic::ClearTarget => "Clear Target",
             Mechanic::GiveExperienceLevels { amount: _ } => "GiveExperienceLevels",
             Mechanic::TakeExperienceLevels { amount: _ } => "TakeExperienceLevels",
             Mechanic::CloseInventory => "CloseInventory",
@@ -3205,6 +3388,7 @@ impl Mechanic {
                 blocks_per_tick: _,
                 duration: _,
             } => "FawePaste",
+            Mechanic::Fear => "Fear",
             Mechanic::Feed {
                 amount: _,
                 saturation: _,
@@ -3353,6 +3537,7 @@ impl Mechanic {
             Mechanic::MountMe { entity: _ } => "MountMe",
             Mechanic::MountTarget { entity: _ } => "MountTarget",
             Mechanic::MovePin { x: _, y: _, z: _ } => "MovePin",
+            Mechanic::OpenCustomMenu { menu: _ } => "Open Custom Menu",
             Mechanic::OpenTrades => "OpenTrades",
             Mechanic::Oxygen { amount: _ } => "Oxygen",
             Mechanic::Particle {
@@ -3508,6 +3693,7 @@ impl Mechanic {
             Mechanic::SetBlockType { block: _ } => "SetBlockType",
             Mechanic::SetChunkForceLoaded { loaded: _ } => "SetChunkForceLoaded",
             Mechanic::SetCollidable { collidable: _ } => "SetCollidable",
+            Mechanic::SetCustomMenuButton { slot: _, icon: _ } => "Set Custom Menu Button",
             Mechanic::SetDragonPodium { podium: _ } => "SetDragonPodium",
             Mechanic::SetGameMode { gamemode: _ } => "SetGameMode",
             Mechanic::SetGliding { gliding: _ } => "SetGliding",
@@ -3565,6 +3751,7 @@ impl Mechanic {
             } => "SetScore",
             Mechanic::SetSpeed { speed: _ } => "SetSpeed",
             Mechanic::SetStance { stance: _ } => "SetStance",
+            Mechanic::SetSulfurCubeArchetype { archetype: _ } => "Set Sulfur Cube Archetype",
             Mechanic::Shield => "Shield",
             Mechanic::ShieldBreak => "ShieldBreak",
             Mechanic::ShieldPercent { percent: _ } => "ShieldPercent",
@@ -3634,8 +3821,8 @@ impl Mechanic {
             } => "SummonPassenger",
             Mechanic::Swap => "Swap",
             Mechanic::SwingOffHand => "SwingOffHand",
-            Mechanic::AddTag(_) => "AddTa",
-            Mechanic::RemoveTag(_) => "RemoveTa",
+            Mechanic::AddTag(_) => "Add Tag",
+            Mechanic::RemoveTag(_) => "Remove Tag",
             Mechanic::TakeItem {
                 item: _,
                 amount: _,
@@ -3677,6 +3864,11 @@ impl Mechanic {
                 from_origin: _,
             } => "Throw",
             Mechanic::ThunderLevel { level: _ } => "ThunderLevel",
+            Mechanic::TickRate {
+                rate: _,
+                duration: _,
+                reset: _,
+            } => "Tick Rate",
             Mechanic::ToggleLever {
                 location: _,
                 duration: _,
@@ -3685,7 +3877,7 @@ impl Mechanic {
                 z: _,
             } => "ToggleLever",
             Mechanic::TogglePiston => "TogglePiston",
-            Mechanic::ToggleSitting(_) => "ToggleSittin",
+            Mechanic::ToggleSitting(_) => "Toggle Sitting",
             Mechanic::TotemOfUndying { model: _ } => "TotemOfUndying",
             Mechanic::TrackLocation => "TrackLocation",
             Mechanic::UndoPaste { paste_id: _ } => "UndoPaste",
@@ -3696,7 +3888,7 @@ impl Mechanic {
                 velocity_z: _,
                 relative: _,
             } => "Velocity",
-            Mechanic::WolfSit(_) => "WolfSi",
+            Mechanic::WolfSit(_) => "Wolf Sit",
             Mechanic::WorldEditReplace { from: _, to: _ } => "WorldEditReplace",
             Mechanic::Weather {
                 weather_type: _,
@@ -3748,12 +3940,12 @@ impl SpawnerSelect {
     }
 
     pub fn handle_ui(&mut self, ui: &mut egui::Ui) {
-        ui.label("Spawner").on_hover_ui(|ui| {
-            ui.label("The name of the spawner(s) to activate. This can accept groups and wildcards also using the appropriate syntax");
+        ui.label(t!("Spawner")).on_hover_ui(|ui| {
+            ui.label(t!("The name of the spawner(s) to activate. This can accept groups and wildcards also using the appropriate syntax"));
         });
         ui.horizontal(|ui| {
             egui::ComboBox::new("spawner_select", "")
-                .selected_text(self.get_fields().into())
+                .selected_text(crate::i18n::tr(self.get_fields()))
                 .show_ui(ui, |ui| {
                     [
                         Self::SpawnerName(String::new()),
@@ -3762,20 +3954,20 @@ impl SpawnerSelect {
                     ]
                     .iter()
                     .for_each(|v| {
-                        ui.selectable_value(self, v.clone(), v.get_fields().into());
+                        ui.selectable_value(self, v.clone(), crate::i18n::tr(v.get_fields()));
                     })
                 });
             match self {
                 SpawnerSelect::SpawnerName(name) => {
-                    ui.label("Name");
+                    ui.label(t!("Name"));
                     ui.text_edit_singleline(name)
                 }
                 SpawnerSelect::SpawnerGroup(name) => {
-                    ui.label("Group");
+                    ui.label(t!("Group"));
                     ui.text_edit_singleline(name)
                 }
                 SpawnerSelect::SpawnerIncrementName(name) => {
-                    ui.label("Incremented Name");
+                    ui.label(t!("Incremented Name"));
                     ui.text_edit_singleline(name)
                 }
             }
@@ -3805,6 +3997,74 @@ impl ActionMode {
     }
 }
 
+#[derive(
+    Serialize, Deserialize, strum::Display, Clone, strum::VariantArray, PartialEq, Default,
+)]
+pub enum AttributeOperation {
+    #[strum(to_string = "ADD_NUMBER")]
+    #[default]
+    AddNumber,
+    #[strum(to_string = "ADD_SCALAR")]
+    AddScalar,
+    #[strum(to_string = "MULTIPLY_SCALAR_1")]
+    MultiplyScalar1,
+}
+
+#[derive(
+    Serialize, Deserialize, strum::Display, Clone, strum::VariantArray, PartialEq, Default,
+)]
+pub enum BarColor {
+    #[strum(to_string = "PINK")]
+    Pink,
+    #[strum(to_string = "BLUE")]
+    Blue,
+    #[strum(to_string = "RED")]
+    #[default]
+    Red,
+    #[strum(to_string = "GREEN")]
+    Green,
+    #[strum(to_string = "YELLOW")]
+    Yellow,
+    #[strum(to_string = "PURPLE")]
+    Purple,
+    #[strum(to_string = "WHITE")]
+    White,
+}
+
+#[derive(
+    Serialize, Deserialize, strum::Display, Clone, strum::VariantArray, PartialEq, Default,
+)]
+pub enum BarStyle {
+    #[strum(to_string = "SOLID")]
+    #[default]
+    Solid,
+    #[strum(to_string = "SEGMENTED_6")]
+    Segmented6,
+    #[strum(to_string = "SEGMENTED_10")]
+    Segmented10,
+    #[strum(to_string = "SEGMENTED_12")]
+    Segmented12,
+    #[strum(to_string = "SEGMENTED_20")]
+    Segmented20,
+}
+
+#[derive(
+    Serialize, Deserialize, strum::Display, Clone, strum::VariantArray, PartialEq, Default,
+)]
+pub enum SulfurCubeArchetype {
+    #[strum(to_string = "bouncy")]
+    #[default]
+    Bouncy,
+    #[strum(to_string = "explosive")]
+    Explosive,
+    #[strum(to_string = "sticky")]
+    Sticky,
+    #[strum(to_string = "hot")]
+    Hot,
+    #[strum(to_string = "slow_flat")]
+    SlowFlat,
+}
+
 #[derive(Serialize, Deserialize, Clone, Default, PartialEq)]
 pub struct TradeIngredient {
     name: String,
@@ -3813,11 +4073,11 @@ pub struct TradeIngredient {
 impl TradeIngredient {
     pub fn handle_ui(&mut self, ui: &mut egui::Ui) {
         ui.horizontal(|ui| {
-            ui.label("Ingredient").on_hover_ui(|ui| {
-                ui.label("The minecraft ingredient");
+            ui.label(t!("Ingredient")).on_hover_ui(|ui| {
+                ui.label(t!("The minecraft ingredient"));
             });
             ui.text_edit_singleline(&mut self.name);
-            ui.label("Count");
+            ui.label(t!("Count"));
             ui.add(egui::DragValue::new(&mut self.count).range(0.0..=64.0));
         });
     }
@@ -4342,7 +4602,7 @@ pub enum AddSetReset {
     Reset,
 }
 
-#[derive(Serialize, Deserialize, strum::Display, Clone, PartialEq)]
+#[derive(Serialize, Deserialize, strum::Display, Clone, PartialEq, strum::VariantArray)]
 pub enum ThreatMode {
     /// Adds amount threat to the target entity
     #[strum(to_string = "add")]
@@ -4367,7 +4627,9 @@ pub enum ThreatMode {
     ForceTop,
 }
 
-#[derive(Serialize, Deserialize, strum::Display, Clone, Default, PartialEq)]
+#[derive(
+    Serialize, Deserialize, strum::Display, Clone, Default, PartialEq, strum::VariantArray,
+)]
 pub enum ThunderLevel {
     #[strum(to_string = "0")]
     #[default]
@@ -4376,7 +4638,9 @@ pub enum ThunderLevel {
     Level1,
 }
 
-#[derive(Serialize, Deserialize, strum::Display, Clone, Default, PartialEq)]
+#[derive(
+    Serialize, Deserialize, strum::Display, Clone, Default, PartialEq, strum::VariantArray,
+)]
 pub enum VelocityMode {
     #[strum(to_string = "set")]
     #[default]

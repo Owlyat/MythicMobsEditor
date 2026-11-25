@@ -1,10 +1,19 @@
 use crate::{
-    skill::{mechanics::{Mechanic, MythicOption, TradeIngredient}, minecraft_lib::MinecraftMob, targeters::{MultyEntity, SingleEntityTarget, Targeter}, triggers::Trigger},
-    states::AppState,
+    i18n::{LANGUAGES, tr},
+    skill::{
+        mechanics::{
+            AttributeOperation, BarColor, BarStyle, Mechanic, MythicOption, SulfurCubeArchetype,
+            ThreatMode, TradeIngredient, VelocityMode,
+        },
+        minecraft_lib::MinecraftMob,
+        targeters::Targeter,
+        triggers::Trigger,
+    },
+    states::{AppState, Locale},
 };
 use eframe::egui;
 use egui::{Button, Color32};
-use strum::{IntoEnumIterator, VariantArray};
+use strum::{IntoEnumIterator, VariantArray, VariantNames};
 
 pub struct Ui {
     pub state: AppState,
@@ -12,26 +21,53 @@ pub struct Ui {
 
 impl Ui {
     pub fn new(_cc: &eframe::CreationContext<'_>, state: AppState) -> Self {
+        rust_i18n::set_locale(&state.locale.to_string());
         Self { state }
     }
 }
 
 impl eframe::App for Ui {
-    fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
-        egui::TopBottomPanel::top("Top").show(ctx, |ui| {
-            ui.heading("MythicMobs Skill Editor");
-            if ui.add(Button::new("Preview")).clicked() {
-                self.state.create_config();
-            }
+    fn ui(&mut self, ui: &mut egui::Ui, _frame: &mut eframe::Frame) {
+        egui::Panel::top("Top").show(ui, |ui| {
+            ui.horizontal(|ui| {
+                ui.heading(t!("MythicMobs Skill Editor"));
+                if ui.add(Button::new(t!("Preview"))).clicked() {
+                    self.state.create_config();
+                }
+                ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                    let current = LANGUAGES
+                        .iter()
+                        .find(|(code, _)| *code == &self.state.locale.to_string())
+                        .map(|(_, name)| *name)
+                        .unwrap_or("English");
+
+                    egui::ComboBox::new("Language_Selector", "")
+                        .selected_text(current)
+                        .show_ui(ui, |ui| {
+                            Locale::iter().for_each(|l| {
+                                if ui
+                                    .selectable_value(
+                                        &mut self.state.locale,
+                                        l.clone(),
+                                        l.to_string(),
+                                    )
+                                    .clicked()
+                                {
+                                    rust_i18n::set_locale(&l.to_string());
+                                }
+                            });
+                        });
+                });
+            });
         });
 
-        egui::SidePanel::left("SidePanel").show(ctx, |ui| {
+        egui::Panel::left("SidePanel").show(ui, |ui| {
             ui.horizontal(|ui| {
-                ui.label(if let MinecraftMob::MetaSkill = self.state.mob_type {"Internal Skill Name"} else {"Internal Name"}).on_hover_ui(|ui| {
-                    if let MinecraftMob::MetaSkill = self.state.mob_type {ui.label("It's the string that will identify the metaskill inside mythicmobs, exactly how the [Internal Name] works for mobs.
+                ui.label(if let MinecraftMob::MetaSkill = self.state.mob_type {t!("Internal Skill Name")} else {t!("Internal Name")}).on_hover_ui(|ui| {
+                    if let MinecraftMob::MetaSkill = self.state.mob_type {ui.label(t!("It's the string that will identify the metaskill inside mythicmobs, exactly how the [Internal Name] works for mobs.
 A valid Internal SkillName must be unique (aka, there cannot exists two skills that shares the skillname) and not containt any space character.
-If you want to execute a specific metaskill in any way, you will have to use its Internal SkillName in some way");} else {ui.label("This string will be how your mob will be referenced internally in MythicMobs and can be any name you like.
-Must be a unique name and does not clash with other internal mob names, NO SPACES ALLOWED.");}
+If you want to execute a specific metaskill in any way, you will have to use its Internal SkillName in some way"));} else {ui.label(t!("This string will be how your mob will be referenced internally in MythicMobs and can be any name you like.
+Must be a unique name and does not clash with other internal mob names, NO SPACES ALLOWED."));}
                 });
                     ui.text_edit_singleline(&mut self.state.mob_name);
             });
@@ -40,49 +76,76 @@ Must be a unique name and does not clash with other internal mob names, NO SPACE
                    self.state.mob_display_name.clear();
                    self.state.mob_health = 0;
                    self.state.damage = 0;
-                   self.state.armor = 0; 
+                   self.state.armor = 0;
                 } else {
-                ui.label("Mob Display Name").on_hover_ui(|ui| {ui.label("Sets the display name of the mob.
+                ui.label(t!("Mob Display Name")).on_hover_ui(|ui| {ui.label(t!("Sets the display name of the mob.
 This option supports color codes and placeholders.
-The mob's name will not change or update on its own, you have to use setname mechanic to change or update it.");});
+The mob's name will not change or update on its own, you have to use setname mechanic to change or update it."));});
                 ui.text_edit_singleline(&mut self.state.mob_display_name);
-                    
                 }
             });
             ui.horizontal(|ui| {
-                ui.label("Type").on_hover_ui(|ui| {
+                ui.label(t!("Type")).on_hover_ui(|ui| {
                     if let MinecraftMob::MetaSkill = self.state.mob_type {
-                        ui.label("A Metaskill is, in essence, a list of mechanics to execute once the metaskill is called via a Meta Mechanic.
-They are located in ../plugins/MythicMobs/Skills inside .yml files, just like their mobs counterpart.");
+                        ui.label(t!("A Metaskill is, in essence, a list of mechanics to execute once the metaskill is called via a Meta Mechanic.
+They are located in ../plugins/MythicMobs/Skills inside .yml files, just like their mobs counterpart."));
                     }else {
-                    ui.label("This field determines which entity type your creation will be based upon.
+                    ui.label(t!("This field determines which entity type your creation will be based upon.
 A complete list of available entity types can be found on spigot javadocs, while here you can find a list of types that are explicitly implemented.
 
 Several mob options for new entity types that Minecraft adds to the base game will not function until Mythic adds support for said entity types
 
 
-Some entity types can have negative, hard-to-discover quirks. It is advised that you refer to the unstable entity types page in order to form a better opinion on what entity you should be using for your current endeavor");}
+Some entity types can have negative, hard-to-discover quirks. It is advised that you refer to the unstable entity types page in order to form a better opinion on what entity you should be using for your current endeavor"));}
 });
-                egui::ComboBox::new("Mob_Type", "")
+                let combo = egui::ComboBox::new("Mob_Type", "")
                     .selected_text(self.state.mob_type.to_string())
+                    // Keep the popup open while typing/clicking in the filter.
+                    .close_behavior(egui::PopupCloseBehavior::CloseOnClickOutside)
                     .show_ui(ui, |ui| {
-                        MinecraftMob::VARIANTS.iter().for_each(|v| {
-                            ui.selectable_value(&mut self.state.mob_type, v.clone(), v.to_string());
-                        });
+                        ui.text_edit_singleline(&mut self.state.mob_type_filter);
+
+                        let filter = self.state.mob_type_filter.trim().to_lowercase();
+                        let mut matches = 0;
+
+                        for v in MinecraftMob::VARIANTS.iter() {
+                            let name = v.to_string();
+                            if !filter.is_empty() && !name.to_lowercase().contains(&filter) {
+                                continue;
+                            }
+
+                            matches += 1;
+                            if ui
+                                .selectable_label(*v == self.state.mob_type, name)
+                                .clicked()
+                            {
+                                self.state.mob_type = v.clone();
+                                self.state.mob_type_filter.clear();
+                                ui.close();
+                            }
+                        }
+
+                        if matches == 0 {
+                            ui.label(t!("No matches"));
+                        }
                     });
+
+                // Reset the filter whenever the dropdown is closed.
+                if combo.inner.is_none() {
+                    self.state.mob_type_filter.clear();
+                }
             });
             ui.horizontal(|ui| {
                 if let MinecraftMob::MetaSkill = self.state.mob_type {} else {
                 ui.add(
                     egui::Slider::new(&mut self.state.mob_health, 0..=2048)
-                        .text("Mob Health")
+                        .text(t!("Mob Health"))
                 ).on_hover_ui(|ui| {
-                        ui.label(r"Sets the base value of the mob's max health attribute.
+                        ui.label(t!(r"Sets the base value of the mob's max health attribute.
 Mythic doesn't have any limitations on max health but Spigot, however, caps the max health at 2048.
 This can easily be changed in spigot's configuration file, server_root\spigot.yml.
-Whenever the mob is holding or wearing an item with attribute modifiers will also affect the total max health.");
+Whenever the mob is holding or wearing an item with attribute modifiers will also affect the total max health."));
                     });
-                    
                 }
             });
             ui.horizontal(|ui| {
@@ -91,36 +154,35 @@ Whenever the mob is holding or wearing an item with attribute modifiers will als
                 } else {
                                     ui.add(
                     egui::Slider::new(&mut self.state.damage, 0..=255)
-                        .text("Mob Damage")
+                        .text(t!("Mob Damage"))
                         .step_by(1.0),
                 ).on_hover_ui(|ui| {
-                        ui.label("Sets the base value of the mob's melee attack damage attribute.
+                        ui.label(t!("Sets the base value of the mob's melee attack damage attribute.
 1 damage equals to 0.5 hearts, so a mob with 6 damage will deal 3 full hearts of damage.
 This attribute will never affect damage done by ranged attacks, like arrows or potions.
-Whenever the mob is holding or wearing an item with attribute modifiers will also affect the mob's melee damage.");
-                    });                    
+Whenever the mob is holding or wearing an item with attribute modifiers will also affect the mob's melee damage."));
+                    });
                 }
             });
             ui.horizontal(|ui| {
                 if let MinecraftMob::MetaSkill = self.state.mob_type {} else {
-                ui.add(egui::Slider::new(&mut self.state.armor, 0..=255).text("Mob Armor").step_by(1.0)).on_hover_ui(|ui| {
-                    ui.label("Sets the base value of the mob's armor attribute.
+                ui.add(egui::Slider::new(&mut self.state.armor, 0..=255).text(t!("Mob Armor")).step_by(1.0)).on_hover_ui(|ui| {
+                    ui.label(t!("Sets the base value of the mob's armor attribute.
 Minecraft caps the max armor value to 30.
-Whenever the mob is holding or wearing an item with attribute modifiers will also affect the total armor.");
+Whenever the mob is holding or wearing an item with attribute modifiers will also affect the total armor."));
                 });
-                    
                 }
             });
             ui.separator();
-            if ui.add(Button::new("Add Skill")).clicked() {
+            if ui.add(Button::new(t!("Add Skill"))).clicked() {
                 self.state.add_skill();
             }
-            if ui.add(Button::new("Remove Skill")).clicked() {
+            if ui.add(Button::new(t!("Remove Skill"))).clicked() {
                 self.state.remove_selected_skill();
             }
             if let Some(sk) = self.state.get_selected_skill() {
                 ui.horizontal(|ui| {
-                    ui.label("Skill name");
+                    ui.label(t!("Skill name"));
                     ui.add(egui::TextEdit::singleline(&mut sk.name));
                 });
             }
@@ -139,13 +201,13 @@ Whenever the mob is holding or wearing an item with attribute modifiers will als
                                     Button::new(sk.name.clone())
                                         .fill(Color32::from_rgb(127, 127, 127)),
                                 );
-                                if selected_id != 0 && ui.button("Move Skill Up").clicked() {
+                                if selected_id != 0 && ui.button(t!("Move Skill Up")).clicked() {
                                     self.state.skills.insert(selected_id - 1, sk.clone());
                                     self.state.remove_skill(selected_id + 1);
                                     self.state.select_skill(selected_id - 1);
                                 }
                                 if selected_id != self.state.skills.len() - 1
-                                    && ui.button("Move Skill Down").clicked()
+                                    && ui.button(t!("Move Skill Down")).clicked()
                                 {
                                     self.state.skills.insert(selected_id + 2, sk.clone());
                                     self.state.remove_skill(selected_id);
@@ -159,34 +221,35 @@ Whenever the mob is holding or wearing an item with attribute modifiers will als
                 });
         });
 
-        egui::CentralPanel::default().show(ctx, |ui| {
+        egui::CentralPanel::default().show(ui, |ui| {
             if let Some(selected_id) = self.state.selected_skill {
                 if let Some(sk) = self.state.skills.get_mut(selected_id) {
                     ui.horizontal(|ui| {
-                        ui.label("Mechanic").on_hover_ui(|ui| {ui.label("Skill Mechanics (or base skills) are simple skills that are built into
+                        ui.label(t!("Mechanic")).on_hover_ui(|ui| {ui.label(t!("Skill Mechanics (or base skills) are simple skills that are built into
 MythicMobs. You can call these basic skills by themselves in your mob's
 Skill List, or you can create your own meta-skill by combining these
 mechanics together.
 Some Mechanics are able to target Entities, Locations, or both! Some
 don't target anything. You control what your skill targets using a
-Targeter.");});
+Targeter."));});
                     egui::ComboBox::new("Mechanic", "")
                         .selected_text(if let Some(mech) = &sk.mechanic {
-                            mech.get_fields().into()
+                            tr(mech.get_fields())
                         } else {
-                            "None".to_owned()
+                            tr("None")
                         })
                         .show_ui(ui, |ui| {
                             Mechanic::iter().for_each(|v| {
                                 ui.selectable_value(
                                     &mut sk.mechanic,
                                     Some(v.clone()),
-                                    v.get_fields().into(),
-                                );
+                                    tr(v.get_fields()),
+                                )
+                                .on_hover_text(tr(v.get_desc()));
                             });
-                            ui.selectable_value(&mut sk.mechanic, None, "None".to_string());
+                            ui.selectable_value(&mut sk.mechanic, None, tr("None"));
                             ui.separator();
-                        });                        
+                        });
                     });
 
                     // Mechanics
@@ -194,49 +257,48 @@ Targeter.");});
                         process_mechanic_ui(ui, mechanic);
                     } else {
                         ui.separator();
-                        ui.label("Raw Args");
+                        ui.label(t!("Raw Args"));
                         ui.text_edit_singleline(&mut sk.raw_args);
                     }
 
                     ui.separator();
                     ui.horizontal(|ui| {
-                        ui.label("Targeters");
-                    egui::ComboBox::new("Targeters_Selector", "").selected_text(sk.targeter.get_fields().into()).show_ui(ui, |ui| {
+                        ui.label(t!("Targeters"));
+                    egui::ComboBox::new("Targeters_Selector", "").selected_text(tr(sk.targeter.get_fields())).show_ui(ui, |ui| {
                         Targeter::iter().for_each(|v| {
-                       ui.selectable_value(&mut sk.targeter, v.clone(), v.get_fields().into()); 
+                       ui.selectable_value(&mut sk.targeter, v.clone(), tr(v.get_fields()))
+                           .on_hover_text(tr(v.get_desc()));
                         });
                     });
-                        
                     });
-                    
                     // Targeter
                     process_targeter_ui(ui, &mut sk.targeter);
 
                     // Trigger
                     ui.separator();
                     ui.horizontal(|ui| {
-                        ui.label("Trigger").on_hover_ui(|ui| {
-                            ui.label("Triggers are used to determine how a skill is triggered from within the
+                        ui.label(t!("Trigger")).on_hover_ui(|ui| {
+                            ui.label(t!("Triggers are used to determine how a skill is triggered from within the
 mobs skill configuration section.
 TRIGGERS CANNOT BE USED IN META-SKILLS AND SHOULD NOT BE INCLUDED
 IN THEM.
 Triggers can only be used to activate the meta-skill
 itself (in the mob's configuration file).
 
-Each trigger starts with a on string. That string is case sensitive, so make sure to write it correctly or the trigger will not work");
+Each trigger starts with a on string. That string is case sensitive, so make sure to write it correctly or the trigger will not work"));
                         });
-                    egui::ComboBox::new("Trigger_Dropdown_Menu", "").selected_text(sk.trigger.get_fields().into()).show_ui(ui, |ui| {
+                    egui::ComboBox::new("Trigger_Dropdown_Menu", "").selected_text(tr(sk.trigger.get_fields())).show_ui(ui, |ui| {
                         Trigger::VARIANTS.iter().for_each(|v| {
-                            ui.selectable_value(&mut sk.trigger, v.clone(), v.get_fields().into());
+                            ui.selectable_value(&mut sk.trigger, v.clone(), tr(v.get_fields()))
+                                .on_hover_text(tr(v.get_desc()));
                         });
                     });
- 
                     });
 
                 }
             }
         });
-        egui::TopBottomPanel::bottom("output_yaml_panel").show(ctx, |ui| {
+        egui::Panel::bottom("output_yaml_panel").show(ui, |ui| {
             if self.state.output.is_empty() {
             } else {
                 ui.add(egui::TextEdit::multiline(&mut self.state.output.clone()).code_editor());
@@ -245,42 +307,90 @@ Each trigger starts with a on string. That string is case sensitive, so make sur
     }
 }
 
-fn process_trigger_ui(ui: &mut egui::Ui, trigger: &mut crate::skill::triggers::Trigger)  {
+fn process_trigger_ui(ui: &mut egui::Ui, trigger: &mut crate::skill::triggers::Trigger) {}
+
+fn process_targeter_ui(ui: &mut egui::Ui, targeter: &mut crate::skill::targeters::Targeter) {
+    ui.horizontal(|ui| match targeter {
+        crate::skill::targeters::Targeter::SingleEntity(single_entity_target) => {
+            ui.label(t!("Single Entity:"));
+            targeter_combo(
+                ui,
+                "Single_Entity_Target_Dropdown_Menu",
+                single_entity_target,
+                |v| v.get_desc(),
+            );
+        }
+        crate::skill::targeters::Targeter::MultyEntity(multy_entity) => {
+            ui.label(t!("Multi Entity:"));
+            targeter_combo(ui, "Multi_Entity_Target_Dropdown_Menu", multy_entity, |v| {
+                v.get_desc()
+            });
+        }
+        crate::skill::targeters::Targeter::ThreatTable(threat_table) => {
+            ui.label(t!("Threat Table:"));
+            targeter_combo(ui, "Threat_Table_Target_Dropdown_Menu", threat_table, |v| {
+                v.get_desc()
+            });
+        }
+        crate::skill::targeters::Targeter::SingleLocation(single_location) => {
+            ui.label(t!("Single Location:"));
+            targeter_combo(
+                ui,
+                "Single_Location_Target_Dropdown_Menu",
+                single_location,
+                |v| v.get_desc(),
+            );
+        }
+        crate::skill::targeters::Targeter::MultiLocation(multi_location) => {
+            ui.label(t!("Multi Location:"));
+            targeter_combo(
+                ui,
+                "Multi_Location_Target_Dropdown_Menu",
+                multi_location,
+                |v| v.get_desc(),
+            );
+        }
+        crate::skill::targeters::Targeter::MetaEntity(meta_entity) => {
+            ui.label(t!("Meta Entity:"));
+            targeter_combo(ui, "Meta_Entity_Target_Dropdown_Menu", meta_entity, |v| {
+                v.get_desc()
+            });
+        }
+        crate::skill::targeters::Targeter::MetaLocation(meta_location) => {
+            ui.label(t!("Meta Location:"));
+            targeter_combo(
+                ui,
+                "Meta_Location_Target_Dropdown_Menu",
+                meta_location,
+                |v| v.get_desc(),
+            );
+        }
+        crate::skill::targeters::Targeter::Region => {
+            ui.label(t!("@Region"));
+        }
+        crate::skill::targeters::Targeter::None => {}
+    });
 }
 
-fn process_targeter_ui(ui: &mut egui::Ui, targeter: &mut crate::skill::targeters::Targeter){
-    ui.horizontal(|ui| {
-
-    match targeter {
-        crate::skill::targeters::Targeter::SingleEntity(single_entity_target) => {
-            ui.label("Single Entity:");
-
-            egui::ComboBox::new("Single_Entity_Target_Dropdown_Menu", "").selected_text(single_entity_target.to_string()).show_ui(ui, |ui| {
-                SingleEntityTarget::VARIANTS.iter().for_each(|v| {
-                ui.selectable_value(single_entity_target, v.clone(), v.to_string());
-                    
-            })
-                
+/// Display a dropdown for any targeter enum that implements `VariantArray` and `Display`.
+fn targeter_combo<T>(ui: &mut egui::Ui, id: &str, value: &mut T, desc: impl Fn(&T) -> &'static str)
+where
+    T: VariantArray + PartialEq + Clone + std::fmt::Display,
+{
+    egui::ComboBox::new(id, "")
+        .selected_text(value.to_string())
+        .show_ui(ui, |ui| {
+            T::VARIANTS.iter().for_each(|v| {
+                ui.selectable_value(value, v.clone(), v.to_string())
+                    .on_hover_text(tr(desc(v)));
             });
-        },
-        crate::skill::targeters::Targeter::MultyEntity(multy_entity) => {
-            ui.label("Mutli Entity:");
-            egui::ComboBox::new("Multi_Entity_Target_Dropdown_Menu", "").selected_text(multy_entity.to_string()).show_ui(ui, |ui| {
-                MultyEntity::VARIANTS.iter().for_each(|v| {
-                    ui.selectable_value(multy_entity, v.clone(), v.to_string());
-                });
-            });
-        },
-        crate::skill::targeters::Targeter::ThreatTable => {},
-        crate::skill::targeters::Targeter::None => {},
-        }
-    });
+        });
 }
 
 /// Display the mechanic parameters as ui
 fn process_mechanic_ui(ui: &mut egui::Ui, mechanic: &mut Mechanic) {
-    ui.heading("Description");
-    ui.label(mechanic.get_desc().into());
+    ui.heading(t!("Description"));
+    ui.label(tr(mechanic.get_desc()));
     ui.separator();
     match mechanic {
         Mechanic::ActivateSpawner { spawner } => {
@@ -303,8 +413,8 @@ fn process_mechanic_ui(ui: &mut egui::Ui, mechanic: &mut Mechanic) {
             ui.horizontal(|ui| {
                 action.handle_ui(ui);
                 ui.horizontal(|ui| {
-                    ui.label("Slot").on_hover_ui(|ui| {
-                        ui.label("The slot to be selected for the action. Slot starts at 0, so if a villager has 3 trades, the middle trade would be slot 1");
+                    ui.label(t!("Slot")).on_hover_ui(|ui| {
+                        ui.label(t!("The slot to be selected for the action. Slot starts at 0, so if a villager has 3 trades, the middle trade would be slot 1"));
                     });
                     ui.add(egui::DragValue::new(slot).range(0.0..=3.0));
                 });
@@ -312,85 +422,93 @@ fn process_mechanic_ui(ui: &mut egui::Ui, mechanic: &mut Mechanic) {
             ui.vertical(|ui| {
                 ingredient.handle_ui(ui);
                 if let MythicOption::None = ingredient_2 {
-                    if ui.button("Add Ingredient").clicked() {
-                        *ingredient_2 = MythicOption::Some(";item2=".to_owned(),TradeIngredient::default(),"".to_owned());
+                    if ui.button(t!("Add Ingredient")).clicked() {
+                        *ingredient_2 = MythicOption::Some(
+                            ";item2=".to_owned(),
+                            TradeIngredient::default(),
+                            "".to_owned(),
+                        );
                     }
-                } else if let MythicOption::Some(pre,ingredient_2, suf) = ingredient_2 {
-                ingredient_2.handle_ui(ui);
-                    
+                } else if let MythicOption::Some(pre, ingredient_2, suf) = ingredient_2 {
+                    ingredient_2.handle_ui(ui);
                 }
             });
             ui.horizontal(|ui| {
-                ui.label("Result").on_hover_ui(|ui| {
-                    ui.label("The result item of the trade");
+                ui.label(t!("Result")).on_hover_ui(|ui| {
+                    ui.label(t!("The result item of the trade"));
                 });
                 ui.text_edit_singleline(result);
             });
             ui.horizontal(|ui| {
-                ui.label("Max Uses").on_hover_ui(|ui| {
-                    ui.label("The uses of the trade");
+                ui.label(t!("Max Uses")).on_hover_ui(|ui| {
+                    ui.label(t!("The uses of the trade"));
                 });
-                if let Some((_,max_uses,_)) = max_uses.some() {
+                if let Some((_, max_uses, _)) = max_uses.some() {
                     ui.add(egui::DragValue::new(max_uses));
-                    
-                } else if ui.button("+").clicked() {
+                } else if ui.button(t!("+")).clicked() {
                     *max_uses = MythicOption::Some(";uses=".to_string(), 0, "".to_string());
                 }
             });
-            if let Some((_,experience_reward,_)) = experience_reward.some() {
-            ui.checkbox(experience_reward, "Experience Reward")
-                .on_hover_ui(|ui| {
-                    ui.label("If the trade should drop experience");
-                });                
-            } else if ui.button("+").clicked() {
-                *experience_reward = MythicOption::Some(";expReward=".to_owned(), false, "".to_owned());
+            if let Some((_, experience_reward, _)) = experience_reward.some() {
+                ui.checkbox(experience_reward, t!("Experience Reward"))
+                    .on_hover_ui(|ui| {
+                        ui.label(t!("If the trade should drop experience"));
+                    });
+            } else if ui.button(t!("+")).clicked() {
+                *experience_reward =
+                    MythicOption::Some(";expReward=".to_owned(), false, "".to_owned());
             }
-
             ui.horizontal(|ui| {
-                ui.label("Villager Experience").on_hover_ui(|ui| {
-                    ui.label(
-                        "The amount of experience to give to the villager upon successful trade",
-                    );
+                ui.label(t!("Villager Experience")).on_hover_ui(|ui| {
+                    ui.label(t!(
+                        "The amount of experience to give to the villager upon successful trade"
+                    ));
                 });
-                if let Some((_,villager_exp,_)) = villager_exp.some() {
-                ui.add(egui::DragValue::new(villager_exp));} else if ui.button("Add Villager Exp").clicked() {
+                if let Some((_, villager_exp, _)) = villager_exp.some() {
+                    ui.add(egui::DragValue::new(villager_exp));
+                } else if ui.button(t!("Add Villager Exp")).clicked() {
                     *villager_exp = MythicOption::Some(";villExp=".to_owned(), 0, "".to_owned());
                 }
             });
             ui.horizontal(|ui| {
-                ui.label("Price Multiplier").on_hover_ui(|ui| {
-                    ui.label(
-                        "The multiplier for the price when the player has made the villager angry",
-                    );
+                ui.label(t!("Price Multiplier")).on_hover_ui(|ui| {
+                    ui.label(t!(
+                        "The multiplier for the price when the player has made the villager angry"
+                    ));
                 });
-                if let Some((_,price_multiplier,_)) = price_multiplier.some() {
-                ui.add(egui::DragValue::new(price_multiplier));} else if ui.button("+").clicked() {
-                    *price_multiplier = MythicOption::Some(";multiplier=".to_owned(), 0, "".to_owned());
+                if let Some((_, price_multiplier, _)) = price_multiplier.some() {
+                    ui.add(egui::DragValue::new(price_multiplier));
+                } else if ui.button(t!("+")).clicked() {
+                    *price_multiplier =
+                        MythicOption::Some(";multiplier=".to_owned(), 0, "".to_owned());
                 }
             });
-
             ui.horizontal(|ui| {
-                ui.label("Demand").on_hover_ui(|ui| {
-                    ui.label("The demand of the trade");
+                ui.label(t!("Demand")).on_hover_ui(|ui| {
+                    ui.label(t!("The demand of the trade"));
                 });
-                if let Some((_,demand,_)) = demand.some() {ui.add(egui::DragValue::new(demand));} else if ui.button("+").clicked() {
+                if let Some((_, demand, _)) = demand.some() {
+                    ui.add(egui::DragValue::new(demand));
+                } else if ui.button(t!("+")).clicked() {
                     *demand = MythicOption::Some(";d=".to_owned(), 1, "".to_ascii_lowercase());
                 }
             });
             ui.horizontal(|ui| {
-                ui.label("Special Price").on_hover_ui(|ui| {ui.label("The special price for when the villager is friendly to the player (player reputation or hero of the village effect)");});
+                ui.label(t!("Special Price")).on_hover_ui(|ui| {ui.label(t!("The special price for when the villager is friendly to the player (player reputation or hero of the village effect)"));});
                 if let Some((_,special_price,_)) = special_price.some() {
-                ui.add(egui::DragValue::new(special_price));} else if ui.button("+").clicked() {
+                ui.add(egui::DragValue::new(special_price));} else if ui.button(t!("+")).clicked() {
                     *special_price = MythicOption::Some(String::from(";special="), 1, String::new());
                 }
             });
             ui.horizontal(|ui| {
-                ui.label("Ignore Discount").on_hover_ui(|ui| {
-                    ui.label("If the discounts should be ignored");
+                ui.label(t!("Ignore Discount")).on_hover_ui(|ui| {
+                    ui.label(t!("If the discounts should be ignored"));
                 });
-                if let Some((_,ignore_discounts,_)) = ignore_discounts.some() {
-                ui.checkbox(ignore_discounts, "");} else if ui.button("+").clicked() {
-                    *ignore_discounts = MythicOption::Some(";discounts=".to_string(), false, String::new());
+                if let Some((_, ignore_discounts, _)) = ignore_discounts.some() {
+                    ui.checkbox(ignore_discounts, "");
+                } else if ui.button(t!("+")).clicked() {
+                    *ignore_discounts =
+                        MythicOption::Some(";discounts=".to_string(), false, String::new());
                 }
             });
         }
@@ -402,78 +520,97 @@ fn process_mechanic_ui(ui: &mut egui::Ui, mechanic: &mut Mechanic) {
             smart,
         } => {
             ui.horizontal(|ui| {
-                ui.label("Head").on_hover_ui(|ui| {ui.label("The position of the head.");});
-                ui.label("X");
+                ui.label(t!("Head")).on_hover_ui(|ui| {
+                    ui.label(t!("The position of the head."));
+                });
+                ui.label(t!("X"));
                 ui.add(egui::DragValue::new(&mut pose.head[0]));
-                ui.label("Y");
+                ui.label(t!("Y"));
                 ui.add(egui::DragValue::new(&mut pose.head[1]));
-                ui.label("Z");
+                ui.label(t!("Z"));
                 ui.add(egui::DragValue::new(&mut pose.head[2]));
             });
             ui.horizontal(|ui| {
-                ui.label("Body").on_hover_ui(|ui| {ui.label("The position of the body.");});
-                ui.label("X");
+                ui.label(t!("Body")).on_hover_ui(|ui| {
+                    ui.label(t!("The position of the body."));
+                });
+                ui.label(t!("X"));
                 ui.add(egui::DragValue::new(&mut pose.body[0]));
-                ui.label("Y");
+                ui.label(t!("Y"));
                 ui.add(egui::DragValue::new(&mut pose.body[1]));
-                ui.label("Z");
+                ui.label(t!("Z"));
                 ui.add(egui::DragValue::new(&mut pose.body[2]));
             });
             ui.horizontal(|ui| {
-                ui.label("Left Arm").on_hover_ui(|ui| {ui.label("The position of the left arm.");}) ;
-                ui.label("X");
+                ui.label(t!("Left Arm")).on_hover_ui(|ui| {
+                    ui.label(t!("The position of the left arm."));
+                });
+                ui.label(t!("X"));
                 ui.add(egui::DragValue::new(&mut pose.left_arm[0]));
-                ui.label("Y");
+                ui.label(t!("Y"));
                 ui.add(egui::DragValue::new(&mut pose.left_arm[1]));
-                ui.label("Z");
+                ui.label(t!("Z"));
                 ui.add(egui::DragValue::new(&mut pose.left_arm[2]));
             });
             ui.horizontal(|ui| {
-                ui.label("Right Arm").on_hover_ui(|ui|{ui.label("The position of the right arm.");});
-                ui.label("X");
+                ui.label(t!("Right Arm")).on_hover_ui(|ui| {
+                    ui.label(t!("The position of the right arm."));
+                });
+                ui.label(t!("X"));
                 ui.add(egui::DragValue::new(&mut pose.right_arm[0]));
-                ui.label("Y");
+                ui.label(t!("Y"));
                 ui.add(egui::DragValue::new(&mut pose.right_arm[1]));
-                ui.label("Z");
+                ui.label(t!("Z"));
                 ui.add(egui::DragValue::new(&mut pose.right_arm[2]));
             });
             ui.horizontal(|ui| {
-                ui.label("Left Leg").on_hover_ui(|ui| {ui.label("The position of the left leg.");});
-                ui.label("X");
+                ui.label(t!("Left Leg")).on_hover_ui(|ui| {
+                    ui.label(t!("The position of the left leg."));
+                });
+                ui.label(t!("X"));
                 ui.add(egui::DragValue::new(&mut pose.left_leg[0]));
-                ui.label("Y");
+                ui.label(t!("Y"));
                 ui.add(egui::DragValue::new(&mut pose.left_leg[1]));
-                ui.label("Z");
+                ui.label(t!("Z"));
                 ui.add(egui::DragValue::new(&mut pose.left_leg[2]));
             });
-            ui.horizontal(|ui|{
-                ui.label("Right Leg").on_hover_ui(|ui| {ui.label("The position of the right leg.");});
-                ui.label("X");
+            ui.horizontal(|ui| {
+                ui.label(t!("Right Leg")).on_hover_ui(|ui| {
+                    ui.label(t!("The position of the right leg."));
+                });
+                ui.label(t!("X"));
                 ui.add(egui::DragValue::new(&mut pose.right_leg[0]));
-                ui.label("Y");
+                ui.label(t!("Y"));
                 ui.add(egui::DragValue::new(&mut pose.right_leg[1]));
-                ui.label("Z");
+                ui.label(t!("Z"));
                 ui.add(egui::DragValue::new(&mut pose.right_leg[2]));
             });
-            ui.horizontal(|ui|{
-                ui.label("Speed").on_hover_ui(|ui| {ui.label("The speed of the animation.");} );
+            ui.horizontal(|ui| {
+                ui.label(t!("Speed")).on_hover_ui(|ui| {
+                    ui.label(t!("The speed of the animation."));
+                });
                 ui.add(egui::DragValue::new(speed));
             });
             ui.horizontal(|ui| {
-                ui.label("Duration").on_hover_ui(|ui|{ui.label("The duration of the animation in ticks.");});
+                ui.label(t!("Duration")).on_hover_ui(|ui| {
+                    ui.label(t!("The duration of the animation in ticks."));
+                });
                 ui.add(egui::DragValue::new(duration));
-            }); 
-            ui.horizontal(|ui| {
-                ui.label("Ignore Empty").on_hover_ui(|ui| {ui.label("Whether to ignore empty pose values.");});
-                ui.checkbox(ignore_empty, "Ignore_Empty_Checkbox");
             });
             ui.horizontal(|ui| {
-                ui.label("Smart").on_hover_ui(|ui| {ui.label("Whether to use smart animation.");});
-                ui.checkbox(smart, "Smart_Checkbox");
+                ui.label(t!("Ignore Empty")).on_hover_ui(|ui| {
+                    ui.label(t!("Whether to ignore empty pose values."));
+                });
+                ui.checkbox(ignore_empty, t!("Ignore Empty"));
             });
-
-        },
-        Mechanic::ArmAnimation => (),
+            ui.horizontal(|ui| {
+                ui.label(t!("Smart")).on_hover_ui(|ui| {
+                    ui.label(t!("Whether to use smart animation."));
+                });
+                ui.checkbox(smart, t!("Smart"));
+            });
+        }
+        Mechanic::ArmAnimation => {}
         Mechanic::ArrowVolley {
             amount,
             spread,
@@ -483,41 +620,61 @@ fn process_mechanic_ui(ui: &mut egui::Ui, mechanic: &mut Mechanic) {
             can_pickup,
         } => {
             ui.horizontal(|ui| {
-                ui.label("Amout").on_hover_ui(|ui| {ui.label("The number of arrows in the volley.");});
+                ui.label(t!("Amout")).on_hover_ui(|ui| {
+                    ui.label(t!("The number of arrows in the volley."));
+                });
                 ui.add(egui::DragValue::new(amount));
             });
             ui.horizontal(|ui| {
-                ui.label("Spread").on_hover_ui(|ui| {ui.label("How spread out the arrows are.");});
+                ui.label(t!("Spread")).on_hover_ui(|ui| {
+                    ui.label(t!("How spread out the arrows are."));
+                });
                 ui.add(egui::DragValue::new(spread));
             });
             ui.horizontal(|ui| {
-                ui.label("Velocity").on_hover_ui(|ui| {ui.label("The velocity of the arrows.");});
+                ui.label(t!("Velocity")).on_hover_ui(|ui| {
+                    ui.label(t!("The velocity of the arrows."));
+                });
                 ui.add(egui::DragValue::new(velocity));
             });
             ui.horizontal(|ui| {
-                ui.label("Fire Ticks").on_hover_ui(|ui| {ui.label("The duration hit entities will burn for in ticks.");});
+                ui.label(t!("Fire Ticks")).on_hover_ui(|ui| {
+                    ui.label(t!("The duration hit entities will burn for in ticks."));
+                });
                 ui.add(egui::DragValue::new(fire_ticks));
             });
             ui.horizontal(|ui| {
-                ui.label("Remove Delay").on_hover_ui(|ui| {ui.label("The time the arrows will stay before disappearing in ticks.");});
+                ui.label(t!("Remove Delay")).on_hover_ui(|ui| {
+                    ui.label(t!(
+                        "The time the arrows will stay before disappearing in ticks."
+                    ));
+                });
                 ui.add(egui::DragValue::new(remove_delay));
             });
             ui.horizontal(|ui| {
-                ui.label("Can Pickup").on_hover_ui(|ui| {ui.label("Whether the arrows can be picked up by players.");});
-                ui.checkbox(can_pickup, "Can_Pickup_Checkbox");
+                ui.label(t!("Can Pickup")).on_hover_ui(|ui| {
+                    ui.label(t!("Whether the arrows can be picked up by players."));
+                });
+                ui.checkbox(can_pickup, t!("Can Pickup"));
             });
-        },
+        }
         Mechanic::AuraRemove { aura_name, stacks } => {
-            ui.horizontal(|ui|{
-                ui.text_edit_singleline(aura_name).on_hover_ui(|ui|{ui.label("The name of the aura to remove.");});
-                ui.label("Amount").on_hover_ui(|ui| {ui.label("The amount of stacks to remove.");});
+            ui.horizontal(|ui| {
+                ui.text_edit_singleline(aura_name).on_hover_ui(|ui| {
+                    ui.label(t!("The name of the aura to remove."));
+                });
+                ui.label(t!("Amount")).on_hover_ui(|ui| {
+                    ui.label(t!("The amount of stacks to remove."));
+                });
                 ui.add(egui::DragValue::new(stacks));
             });
-        },
+        }
         Mechanic::BlackScreen { duration } => {
-            ui.label("Duration").on_hover_ui(|ui| {ui.label("The duration of the black screen effect.");});
+            ui.label(t!("Duration")).on_hover_ui(|ui| {
+                ui.label(t!("The duration of the black screen effect."));
+            });
             ui.add(egui::DragValue::new(duration));
-        },
+        }
         Mechanic::BlockDestabilize => (),
         Mechanic::BlockMask {
             material,
@@ -531,66 +688,90 @@ fn process_mechanic_ui(ui: &mut egui::Ui, mechanic: &mut Mechanic) {
             occlude,
         } => {
             ui.horizontal(|ui| {
-                ui.label("Material").on_hover_ui(|ui| {ui.label("The type of block used for the blockmask.");});
+                ui.label(t!("Material")).on_hover_ui(|ui| {
+                    ui.label(t!("The type of block used for the blockmask."));
+                });
                 ui.text_edit_singleline(material);
             });
-            ui.horizontal(|ui|{
-                ui.label("Radius").on_hover_ui(|ui|{ui.label("The radius of the blockmask effect.");});
+            ui.horizontal(|ui| {
+                ui.label(t!("Radius")).on_hover_ui(|ui| {
+                    ui.label(t!("The radius of the blockmask effect."));
+                });
                 ui.add(egui::DragValue::new(radius));
             });
             ui.horizontal(|ui| {
-                ui.label("Radius Y").on_hover_ui(|ui| {ui.label("The y component of the radius.");});
+                ui.label(t!("Radius Y")).on_hover_ui(|ui| {
+                    ui.label(t!("The y component of the radius."));
+                });
                 ui.add(egui::DragValue::new(radius_y));
             });
             ui.horizontal(|ui| {
-                ui.label("Noise").on_hover_ui(|ui|{ui.label("Defines the randomness of the effect.");});
+                ui.label(t!("Noise")).on_hover_ui(|ui| {
+                    ui.label(t!("Defines the randomness of the effect."));
+                });
                 ui.add(egui::DragValue::new(noise));
             });
             ui.horizontal(|ui| {
-                ui.label("Duration").on_hover_ui(|ui| {ui.label("Duration of the effect in ticks.");});
+                ui.label(t!("Duration")).on_hover_ui(|ui| {
+                    ui.label(t!("Duration of the effect in ticks."));
+                });
                 ui.add(egui::DragValue::new(duration));
             });
             ui.horizontal(|ui| {
-                ui.label("Shape").on_hover_ui(|ui| {ui.label("The shape of the effect.");});
-                egui::ComboBox::new("BlockMask_Shape_ComboBox", "").selected_text(shape.to_string()).show_ui(ui, |ui| {
-                    use crate::skill::mechanics::Shape;
-                    Shape::VARIANTS.iter().for_each(|v| {
-                        ui.selectable_value(shape, v.clone(), v.to_string());
-                    });
+                ui.label(t!("Shape")).on_hover_ui(|ui| {
+                    ui.label(t!("The shape of the effect."));
                 });
+                egui::ComboBox::new("BlockMask_Shape_ComboBox", "")
+                    .selected_text(shape.to_string())
+                    .show_ui(ui, |ui| {
+                        use crate::skill::mechanics::Shape;
+                        Shape::VARIANTS.iter().for_each(|v| {
+                            ui.selectable_value(shape, v.clone(), v.to_string());
+                        });
+                    });
             });
             ui.horizontal(|ui| {
-                ui.label("No Air").on_hover_ui(|ui| {ui.label("Mask no air blocks only.");});
-                ui.checkbox(no_air, "No_Air_Checkbox");
+                ui.label(t!("No Air")).on_hover_ui(|ui| {
+                    ui.label(t!("Mask no air blocks only."));
+                });
+                ui.checkbox(no_air, t!("No Air"));
             });
             ui.horizontal(|ui| {
-                ui.label("Only Air").on_hover_ui(|ui| {ui.label("Mask air blocks only.");});
-                ui.checkbox(only_air, "Only_Air_Checkbox");
+                ui.label(t!("Only Air")).on_hover_ui(|ui| {
+                    ui.label(t!("Mask air blocks only."));
+                });
+                ui.checkbox(only_air, t!("Only Air"));
             });
             ui.horizontal(|ui| {
-                ui.label("Occlude").on_hover_ui(|ui| {ui.label("If only_air is used, target transparent blocks as well.");});
-                ui.checkbox(occlude, "Occlude_Checkbox");
+                ui.label(t!("Occlude")).on_hover_ui(|ui| {
+                    ui.label(t!(
+                        "If only_air is used, target transparent blocks as well."
+                    ));
+                });
+                ui.checkbox(occlude, t!("Occlude"));
             });
-        },
+        }
         Mechanic::BlockUnmask { radius, shape } => {
-            ui.horizontal(|ui|{
-                ui.label("Radius").on_hover_ui(|ui| {
-                    ui.label("The radius of the blockunmask effect.");
+            ui.horizontal(|ui| {
+                ui.label(t!("Radius")).on_hover_ui(|ui| {
+                    ui.label(t!("The radius of the blockunmask effect."));
                 });
                 ui.add(egui::DragValue::new(radius));
             });
             ui.horizontal(|ui| {
-                ui.label("Shape").on_hover_ui(|ui| {
-                    ui.label("The shape of the effect.");
-                } );
-                egui::ComboBox::new("BlockUnmask_Shape_ComboBox", "").selected_text(shape.to_string()).show_ui(ui, |ui| {
-                    use crate::skill::mechanics::Shape;
-                    Shape::VARIANTS.iter().for_each(|v| {
-                        ui.selectable_value(shape, v.clone(), v.to_string());
-                    });
+                ui.label(t!("Shape")).on_hover_ui(|ui| {
+                    ui.label(t!("The shape of the effect."));
                 });
+                egui::ComboBox::new("BlockUnmask_Shape_ComboBox", "")
+                    .selected_text(shape.to_string())
+                    .show_ui(ui, |ui| {
+                        use crate::skill::mechanics::Shape;
+                        Shape::VARIANTS.iter().for_each(|v| {
+                            ui.selectable_value(shape, v.clone(), v.to_string());
+                        });
+                    });
             });
-        },
+        }
         Mechanic::BlockPhysics => (),
         Mechanic::BlockWave {
             material,
@@ -609,124 +790,188 @@ fn process_mechanic_ui(ui: &mut egui::Ui, mechanic: &mut Mechanic) {
             ignore_air,
         } => {
             ui.horizontal(|ui| {
-                ui.label("Material").on_hover_ui(|ui| {ui.label("The material used for the blockwave.");});
+                ui.label(t!("Material")).on_hover_ui(|ui| {
+                    ui.label(t!("The material used for the blockwave."));
+                });
                 ui.text_edit_singleline(material);
             });
             ui.horizontal(|ui| {
-                ui.label("Radius").on_hover_ui(|ui| {ui.label("The radius of the blockwave effect.");});
+                ui.label(t!("Radius")).on_hover_ui(|ui| {
+                    ui.label(t!("The radius of the blockwave effect."));
+                });
                 ui.add(egui::DragValue::new(radius).speed(1));
             });
             ui.horizontal(|ui| {
-                ui.label("Radius Y").on_hover_ui(|ui| {ui.label("The y radius of the blockwave effect.");});
+                ui.label(t!("Radius Y")).on_hover_ui(|ui| {
+                    ui.label(t!("The y radius of the blockwave effect."));
+                });
                 ui.add(egui::DragValue::new(radius_y).speed(1));
             });
             ui.horizontal(|ui| {
-                ui.label("Duration").on_hover_ui(|ui| {ui.label("Duration of the effect in ticks.");});
+                ui.label(t!("Duration")).on_hover_ui(|ui| {
+                    ui.label(t!("Duration of the effect in ticks."));
+                });
                 ui.add(egui::DragValue::new(duration).speed(1));
             });
             ui.horizontal(|ui| {
-                ui.label("Shape").on_hover_ui(|ui| {ui.label("The shape of the effect.");});
-                egui::ComboBox::new("BlockWave_Shape_ComboBox", "").selected_text(shape.to_string()).show_ui(ui, |ui| {
-                    use crate::skill::mechanics::Shape;
-                    Shape::VARIANTS.iter().for_each(|v| {
-                        ui.selectable_value(shape, v.clone(), v.to_string());
-                    });
+                ui.label(t!("Shape")).on_hover_ui(|ui| {
+                    ui.label(t!("The shape of the effect."));
                 });
+                egui::ComboBox::new("BlockWave_Shape_ComboBox", "")
+                    .selected_text(shape.to_string())
+                    .show_ui(ui, |ui| {
+                        use crate::skill::mechanics::Shape;
+                        Shape::VARIANTS.iter().for_each(|v| {
+                            ui.selectable_value(shape, v.clone(), v.to_string());
+                        });
+                    });
             });
             ui.horizontal(|ui| {
-                ui.label("Velocity").on_hover_ui(|ui| {ui.label("The speed of the effect.");});
+                ui.label(t!("Velocity")).on_hover_ui(|ui| {
+                    ui.label(t!("The speed of the effect."));
+                });
                 ui.add(egui::DragValue::new(velocity).speed(1.0));
             });
             ui.horizontal(|ui| {
-                ui.label("Horizontal Velocity").on_hover_ui(|ui| {ui.label("The speed of the effect in the horizontal direction.");});
+                ui.label(t!("Horizontal Velocity")).on_hover_ui(|ui| {
+                    ui.label(t!("The speed of the effect in the horizontal direction."));
+                });
                 ui.add(egui::DragValue::new(horizontal_velocity));
             });
             ui.horizontal(|ui| {
-                ui.label("Specific Velocities").on_hover_ui(|ui|{ui.label("Whether to make use of the specific velocities.");});
+                ui.label(t!("Specific Velocities")).on_hover_ui(|ui| {
+                    ui.label(t!("Whether to make use of the specific velocities."));
+                });
                 ui.checkbox(specific_velocities, "");
             });
             ui.horizontal(|ui| {
-                ui.label("Velocity X").on_hover_ui(|ui| {ui.label("The speed of the effect on the x axis.");});
+                ui.label(t!("Velocity X")).on_hover_ui(|ui| {
+                    ui.label(t!("The speed of the effect on the x axis."));
+                });
                 ui.add(egui::DragValue::new(velocity_x).speed(1));
             });
             ui.horizontal(|ui| {
-                ui.label("Velocity Y").on_hover_ui(|ui| {ui.label("The speed of the effect on the y axis.");});
+                ui.label(t!("Velocity Y")).on_hover_ui(|ui| {
+                    ui.label(t!("The speed of the effect on the y axis."));
+                });
                 ui.add(egui::DragValue::new(velocity_y).speed(1));
             });
             ui.horizontal(|ui| {
-                ui.label("Velocity Z").on_hover_ui(|ui| {ui.label("The speed of the effect on the z axis.");});
+                ui.label(t!("Velocity Z")).on_hover_ui(|ui| {
+                    ui.label(t!("The speed of the effect on the z axis."));
+                });
                 ui.add(egui::DragValue::new(velocity_z).speed(1));
             });
             ui.horizontal(|ui| {
-                ui.label("Noise").on_hover_ui(|ui| {ui.label("The noise of the effect.");});
-                ui.add(egui::DragValue::new(noise).speed(1)); 
+                ui.label(t!("Noise")).on_hover_ui(|ui| {
+                    ui.label(t!("The noise of the effect."));
+                });
+                ui.add(egui::DragValue::new(noise).speed(1));
             });
             ui.horizontal(|ui| {
-                ui.label("Hide Source Block").on_hover_ui(|ui| {ui.label("Whether to hide the source block.");});
+                ui.label(t!("Hide Source Block")).on_hover_ui(|ui| {
+                    ui.label(t!("Whether to hide the source block."));
+                });
                 ui.checkbox(hide_source_block, "");
             });
             ui.horizontal(|ui| {
-                ui.label("Ignore Air").on_hover_ui(|ui| {ui.label("Whether air blocks should be ignored.");});
+                ui.label(t!("Ignore Air")).on_hover_ui(|ui| {
+                    ui.label(t!("Whether air blocks should be ignored."));
+                });
                 ui.checkbox(ignore_air, "");
             });
-        },
-        Mechanic::BloodyScreen { duration, cancel } => (),
-        Mechanic::BoneMeal { block_face } => (),
-        Mechanic::BossBorder { radius } => (),
+        }
+        Mechanic::BloodyScreen { duration, cancel } => {
+            ui.horizontal(|ui| {
+                ui.label(t!("Duration")).on_hover_ui(|ui| {
+                    ui.label(t!("The time (in ticks) that the effect is active."));
+                });
+                ui.add(egui::DragValue::new(duration));
+            });
+            ui.horizontal(|ui| {
+                ui.label(t!("Cancel")).on_hover_ui(|ui| {
+                    ui.label(t!("If true, it stops any existing redscreen."));
+                });
+                ui.checkbox(cancel, "");
+            });
+        }
+        Mechanic::BoneMeal { block_face } => {
+            ui.horizontal(|ui| {
+                ui.label(t!("Block Face")).on_hover_ui(|ui| {
+                    ui.label(t!("The block face to apply bonemeal to."));
+                });
+                ui.text_edit_singleline(block_face);
+            });
+        }
+        Mechanic::BossBorder { radius } => {
+            ui.horizontal(|ui| {
+                ui.label(t!("Radius")).on_hover_ui(|ui| {
+                    ui.label(t!("The border radius of the boss."));
+                });
+                ui.add(egui::DragValue::new(radius));
+            });
+        }
         Mechanic::Bouncy {
             aura_name,
             on_bounce_skill,
             cancel_event,
-        } => (),
+        } => {
+            ui.horizontal(|ui| {
+                ui.label(t!("Aura Name")).on_hover_ui(|ui| {
+                    ui.label(t!("The name of the aura."));
+                    ui.text_edit_singleline(aura_name);
+                })
+            });
+        }
         Mechanic::BreakBlock {
             do_drops,
             do_effect,
             use_tool,
-        } => (),
+        } => {}
         Mechanic::BreakBlockAndGiveItem {
             do_drops,
             do_effect,
             use_tool,
             do_fake_looting,
             items,
-        } => (),
-        Mechanic::ClearExperience => (),
-        Mechanic::ClearExperienceLevels => (),
-        Mechanic::GiveExperienceLevels { amount } => (),
-        Mechanic::TakeExperienceLevels { amount } => (),
-        Mechanic::CloseInventory => (),
+        } => {}
+        Mechanic::ClearExperience => {}
+        Mechanic::ClearExperienceLevels => {}
+        Mechanic::GiveExperienceLevels { amount } => {}
+        Mechanic::TakeExperienceLevels { amount } => {}
+        Mechanic::CloseInventory => {}
         Mechanic::Command {
             command,
             as_caster,
             as_op,
             as_target,
             require_target,
-        } => (),
-        Mechanic::Consume { damage, heal } => (),
-        Mechanic::ConsumeSlot { slot, amount } => (),
+        } => {}
+        Mechanic::Consume { damage, heal } => {}
+        Mechanic::ConsumeSlot { slot, amount } => {}
         Mechanic::DirectionalVelocity {
             yaw,
             pitch,
             velocity,
             mode,
-        } => (),
+        } => {}
         Mechanic::Disengage {
             velocity,
             velocity_y,
-        } => (),
-        Mechanic::Disguise { disguise } => (),
-        Mechanic::DisguiseModify { disguise } => (),
-        Mechanic::DisguiseTarget { disguise } => (),
-        Mechanic::Undisguise => (),
-        Mechanic::Dismount => (),
+        } => {}
+        Mechanic::Disguise { disguise } => {}
+        Mechanic::DisguiseModify { disguise } => {}
+        Mechanic::DisguiseTarget { disguise } => {}
+        Mechanic::Undisguise => {}
+        Mechanic::Dismount => {}
         Mechanic::DisplayTransformation {
             action,
             transformation_type,
             value,
-        } => (),
-        Mechanic::ClearThreat => (),
-        Mechanic::CurrencyGive { amount } => (),
-        Mechanic::CurrencyTake { amount } => (),
+        } => {}
+        Mechanic::ClearThreat => {}
+        Mechanic::CurrencyGive { amount } => {}
+        Mechanic::CurrencyTake { amount } => {}
         Mechanic::Damage {
             amount,
             ignore_armor,
@@ -745,41 +990,41 @@ fn process_mechanic_ui(ui: &mut egui::Ui, mechanic: &mut Mechanic) {
             raw_tags,
             element,
             trigger_skills,
-        } => (),
+        } => {}
         Mechanic::BaseDamage {
             multiplier,
             use_attribute,
-        } => (),
+        } => {}
         Mechanic::PercentDamage {
             percent,
             current_health,
-        } => (),
-        Mechanic::Decapitate => (),
+        } => {}
+        Mechanic::Decapitate => {}
         Mechanic::Doppleganger {
             has_nameplate,
             use_player_name,
-        } => (),
+        } => {}
         Mechanic::DropItem {
             items,
             naturally,
             on_drop_skill,
-        } => (),
-        Mechanic::EjectPassenger => (),
-        Mechanic::Ender => (),
-        Mechanic::EnderBeam { duration, y_offset } => (),
-        Mechanic::EnderDragonResetCrystals => (),
-        Mechanic::EnderDragonSetPhase { phase } => (),
-        Mechanic::EnderDragonSetRespawnPhase { phase } => (),
-        Mechanic::EnderDragonSpawnPortal { with_portals } => (),
-        Mechanic::Equip { item } => (),
-        Mechanic::EquipCopy { slots } => (),
+        } => {}
+        Mechanic::EjectPassenger => {}
+        Mechanic::Ender => {}
+        Mechanic::EnderBeam { duration, y_offset } => {}
+        Mechanic::EnderDragonResetCrystals => {}
+        Mechanic::EnderDragonSetPhase { phase } => {}
+        Mechanic::EnderDragonSetRespawnPhase { phase } => {}
+        Mechanic::EnderDragonSpawnPortal { with_portals } => {}
+        Mechanic::Equip { item } => {}
+        Mechanic::EquipCopy { slots } => {}
         Mechanic::Explosion {
             power_explosion,
             block_damage,
             fire,
-        } => (),
-        Mechanic::FakeExplosion => (),
-        Mechanic::Extinguish => (),
+        } => {}
+        Mechanic::FakeExplosion => {}
+        Mechanic::Extinguish => {}
         Mechanic::FawePaste {
             schematic,
             paste_id,
@@ -793,17 +1038,17 @@ fn process_mechanic_ui(ui: &mut egui::Ui, mechanic: &mut Mechanic) {
             trap_chest_drop_table,
             blocks_per_tick,
             duration,
-        } => (),
+        } => {}
         Mechanic::Feed {
             amount,
             saturation,
             overfeed,
-        } => (),
+        } => {}
         Mechanic::FillChest {
             items,
             should_stack,
             should_empty,
-        } => (),
+        } => {}
         Mechanic::Firework {
             firework_type,
             power,
@@ -811,26 +1056,26 @@ fn process_mechanic_ui(ui: &mut egui::Ui, mechanic: &mut Mechanic) {
             trail,
             colors,
             fade_colors,
-        } => (),
-        Mechanic::Flames => (),
-        Mechanic::Fly => (),
-        Mechanic::ForcePull { spread, v_spread } => (),
-        Mechanic::Freeze { ticks } => (),
+        } => {}
+        Mechanic::Flames => {}
+        Mechanic::Fly => {}
+        Mechanic::ForcePull { spread, v_spread } => {}
+        Mechanic::Freeze { ticks } => {}
         Mechanic::Geyser {
             liquid_type,
             height,
             interval,
-        } => (),
-        Mechanic::GiveItem { item, fake_looting } => (),
-        Mechanic::GiveItemFromSlot { slot, fake_looting } => (),
-        Mechanic::GiveItemFromTarget { item, fake_looting } => (),
-        Mechanic::Glow { color } => (),
-        Mechanic::GoatRam => (),
+        } => {}
+        Mechanic::GiveItem { item, fake_looting } => {}
+        Mechanic::GiveItemFromSlot { slot, fake_looting } => {}
+        Mechanic::GiveItemFromTarget { item, fake_looting } => {}
+        Mechanic::Glow { color } => {}
+        Mechanic::GoatRam => {}
         Mechanic::GoTo {
             speed,
             spread_h,
             spread_v,
-        } => (),
+        } => {}
         Mechanic::GuardianBeam {
             duration,
             interval,
@@ -840,28 +1085,28 @@ fn process_mechanic_ui(ui: &mut egui::Ui, mechanic: &mut Mechanic) {
             on_start_skill,
             on_tick_skill,
             on_end_skill,
-        } => (),
+        } => {}
         Mechanic::Heal {
             amount,
             overheal,
             max_overheal,
-        } => (),
+        } => {}
         Mechanic::HealPercent {
             multiplier,
             overheal,
             max_overheal,
-        } => (),
+        } => {}
         Mechanic::Hide {
             ignore_aura_options,
-        } => (),
+        } => {}
         Mechanic::Hit {
             multiplier,
             forced_damage,
             trigger_skills,
             scale_by_attack_cooldown,
-        } => (),
-        Mechanic::Hologram { text, stay } => (),
-        Mechanic::Ignite { ticks } => (),
+        } => {}
+        Mechanic::Hologram { text, stay } => {}
+        Mechanic::Ignite { ticks } => {}
         Mechanic::ItemSpray {
             items,
             amount,
@@ -872,60 +1117,60 @@ fn process_mechanic_ui(ui: &mut egui::Ui, mechanic: &mut Mechanic) {
             y_offset,
             allow_pickup,
             gravity,
-        } => (),
-        Mechanic::JSONMessage { message } => (),
-        Mechanic::Jump { velocity } => (),
-        Mechanic::Leap { velocity, noise } => (),
-        Mechanic::Lightning { damage } => (),
+        } => {}
+        Mechanic::JSONMessage { message } => {}
+        Mechanic::Jump { velocity } => {}
+        Mechanic::Leap { velocity, noise } => {}
+        Mechanic::Lightning { damage } => {}
         Mechanic::FakeLightning {
             localized,
             localized_radius,
-        } => (),
-        Mechanic::Log { message } => (),
+        } => {}
+        Mechanic::Log { message } => {}
         Mechanic::Look {
             head_only,
             force,
             force_paper,
             immediately,
-        } => (),
+        } => {}
         Mechanic::Lunge {
             velocity,
             velocity_y,
             old_math,
-        } => (),
-        Mechanic::MatchRotation { target } => (),
-        Mechanic::Message { message, audience } => (),
+        } => {}
+        Mechanic::MatchRotation { target } => {}
+        Mechanic::Message { message, audience } => {}
         Mechanic::ModifyDamage {
             amount,
             damage_type,
             action,
-        } => (),
+        } => {}
         Mechanic::ModifyGlobalScore {
             objective,
             action,
             value,
-        } => (),
+        } => {}
         Mechanic::ModifyTargetScore {
             objective,
             action,
             value,
-        } => (),
+        } => {}
         Mechanic::ModifyMobScore {
             objective,
             action,
             value,
-        } => (),
+        } => {}
         Mechanic::ModifyScore {
             objective,
             action,
             value,
-        } => (),
-        Mechanic::Mount { entity } => (),
-        Mechanic::MountMe { entity } => (),
-        Mechanic::MountTarget { entity } => (),
-        Mechanic::MovePin { x, y, z } => (),
-        Mechanic::OpenTrades => (),
-        Mechanic::Oxygen { amount } => (),
+        } => {}
+        Mechanic::Mount { entity } => {}
+        Mechanic::MountMe { entity } => {}
+        Mechanic::MountTarget { entity } => {}
+        Mechanic::MovePin { x, y, z } => {}
+        Mechanic::OpenTrades => {}
+        Mechanic::Oxygen { amount } => {}
         Mechanic::Particle {
             particle,
             amount,
@@ -933,7 +1178,7 @@ fn process_mechanic_ui(ui: &mut egui::Ui, mechanic: &mut Mechanic) {
             x,
             y,
             z,
-        } => (),
+        } => {}
         Mechanic::ParticleBox {
             particle,
             amount,
@@ -943,7 +1188,7 @@ fn process_mechanic_ui(ui: &mut egui::Ui, mechanic: &mut Mechanic) {
             z,
             width,
             height,
-        } => (),
+        } => {}
         Mechanic::ParticleEquation {
             particle,
             amount,
@@ -952,7 +1197,7 @@ fn process_mechanic_ui(ui: &mut egui::Ui, mechanic: &mut Mechanic) {
             y,
             z,
             equation,
-        } => (),
+        } => {}
         Mechanic::ParticleLine {
             particle,
             amount,
@@ -961,7 +1206,7 @@ fn process_mechanic_ui(ui: &mut egui::Ui, mechanic: &mut Mechanic) {
             y,
             z,
             length,
-        } => (),
+        } => {}
         Mechanic::ParticleLineHelix {
             particle,
             amount,
@@ -971,7 +1216,7 @@ fn process_mechanic_ui(ui: &mut egui::Ui, mechanic: &mut Mechanic) {
             z,
             length,
             radius,
-        } => (),
+        } => {}
         Mechanic::ParticleLineRing {
             particle,
             amount,
@@ -980,7 +1225,7 @@ fn process_mechanic_ui(ui: &mut egui::Ui, mechanic: &mut Mechanic) {
             y,
             z,
             radius,
-        } => (),
+        } => {}
         Mechanic::ParticleOrbital {
             particle,
             amount,
@@ -989,7 +1234,7 @@ fn process_mechanic_ui(ui: &mut egui::Ui, mechanic: &mut Mechanic) {
             y,
             z,
             radius,
-        } => (),
+        } => {}
         Mechanic::ParticleRing {
             particle,
             amount,
@@ -998,7 +1243,7 @@ fn process_mechanic_ui(ui: &mut egui::Ui, mechanic: &mut Mechanic) {
             y,
             z,
             radius,
-        } => (),
+        } => {}
         Mechanic::ParticleSphere {
             particle,
             amount,
@@ -1007,7 +1252,7 @@ fn process_mechanic_ui(ui: &mut egui::Ui, mechanic: &mut Mechanic) {
             y,
             z,
             radius,
-        } => (),
+        } => {}
         Mechanic::ParticleTornado {
             particle,
             amount,
@@ -1017,7 +1262,7 @@ fn process_mechanic_ui(ui: &mut egui::Ui, mechanic: &mut Mechanic) {
             z,
             height,
             radius,
-        } => (),
+        } => {}
         Mechanic::Atom {
             particle,
             amount,
@@ -1026,118 +1271,118 @@ fn process_mechanic_ui(ui: &mut egui::Ui, mechanic: &mut Mechanic) {
             y,
             z,
             radius,
-        } => (),
-        Mechanic::PickUpItem { item } => (),
-        Mechanic::PlayAnimation { animation } => (),
-        Mechanic::PlayBlockBreakSound { block } => (),
-        Mechanic::PlayBlockFallSound { block } => (),
-        Mechanic::PlayBlockHitSound { block } => (),
-        Mechanic::PlayBlockPlaceSound { block } => (),
-        Mechanic::PlayBlockStepSound { block } => (),
-        Mechanic::PoseArmorStand { pose } => (),
+        } => {}
+        Mechanic::PickUpItem { item } => {}
+        Mechanic::PlayAnimation { animation } => {}
+        Mechanic::PlayBlockBreakSound { block } => {}
+        Mechanic::PlayBlockFallSound { block } => {}
+        Mechanic::PlayBlockHitSound { block } => {}
+        Mechanic::PlayBlockPlaceSound { block } => {}
+        Mechanic::PlayBlockStepSound { block } => {}
+        Mechanic::PoseArmorStand { pose } => {}
         Mechanic::Potion {
             potion,
             duration,
             level,
-        } => (),
-        Mechanic::PotionClear => (),
-        Mechanic::Prison => (),
-        Mechanic::PrintParentTree => (),
-        Mechanic::Propel { velocity } => (),
-        Mechanic::Pull { velocity } => (),
-        Mechanic::PushBlock { velocity } => (),
-        Mechanic::PushButton => (),
-        Mechanic::RayTrace => (),
-        Mechanic::RayTraceTo => (),
-        Mechanic::Rally { radius } => (),
-        Mechanic::RandomMessage { messages } => (),
-        Mechanic::Recoil { velocity } => (),
-        Mechanic::Remount => (),
-        Mechanic::Remove => (),
-        Mechanic::RemoveHeldItem => (),
-        Mechanic::RemoveOwner => (),
-        Mechanic::ResetAI => (),
-        Mechanic::RotateTowards { target } => (),
-        Mechanic::RunAIGoalSelector => (),
-        Mechanic::RunAITargetSelector => (),
-        Mechanic::Saddle => (),
-        Mechanic::SendActionMessage { message } => (),
-        Mechanic::SendResourcePack { url } => (),
+        } => {}
+        Mechanic::PotionClear => {}
+        Mechanic::Prison => {}
+        Mechanic::PrintParentTree => {}
+        Mechanic::Propel { velocity } => {}
+        Mechanic::Pull { velocity } => {}
+        Mechanic::PushBlock { velocity } => {}
+        Mechanic::PushButton => {}
+        Mechanic::RayTrace => {}
+        Mechanic::RayTraceTo => {}
+        Mechanic::Rally { radius } => {}
+        Mechanic::RandomMessage { messages } => {}
+        Mechanic::Recoil { velocity } => {}
+        Mechanic::Remount => {}
+        Mechanic::Remove => {}
+        Mechanic::RemoveHeldItem => {}
+        Mechanic::RemoveOwner => {}
+        Mechanic::ResetAI => {}
+        Mechanic::RotateTowards { target } => {}
+        Mechanic::RunAIGoalSelector => {}
+        Mechanic::RunAITargetSelector => {}
+        Mechanic::Saddle => {}
+        Mechanic::SendActionMessage { message } => {}
+        Mechanic::SendResourcePack { url } => {}
         Mechanic::SendTitle {
             title,
             subtitle,
             fade_in,
             stay,
             fade_out,
-        } => (),
-        Mechanic::SendToast { title, message } => (),
-        Mechanic::SetAI { ai } => (),
-        Mechanic::SetBlockOpen { open } => (),
-        Mechanic::SetBlockType { block } => (),
-        Mechanic::SetChunkForceLoaded { loaded } => (),
-        Mechanic::SetCollidable { collidable } => (),
-        Mechanic::SetDragonPodium { podium } => (),
-        Mechanic::SetGameMode { gamemode } => (),
-        Mechanic::SetGliding { gliding } => (),
+        } => {}
+        Mechanic::SendToast { title, message } => {}
+        Mechanic::SetAI { ai } => {}
+        Mechanic::SetBlockOpen { open } => {}
+        Mechanic::SetBlockType { block } => {}
+        Mechanic::SetChunkForceLoaded { loaded } => {}
+        Mechanic::SetCollidable { collidable } => {}
+        Mechanic::SetDragonPodium { podium } => {}
+        Mechanic::SetGameMode { gamemode } => {}
+        Mechanic::SetGliding { gliding } => {}
         Mechanic::SetGlobalScore {
             objective,
             action,
             value,
-        } => (),
-        Mechanic::SetGravity { gravity } => (),
-        Mechanic::SetHealth { health } => (),
-        Mechanic::SetInteractionSize { width, height } => (),
-        Mechanic::SetItemGroupCooldown { group, cooldown } => (),
-        Mechanic::SetDisplayEntityItem { item } => (),
-        Mechanic::SetLeashHolder { holder } => (),
-        Mechanic::SetLevel { level } => (),
-        Mechanic::SetMaterialCooldown { material, cooldown } => (),
-        Mechanic::SetMaxHealth { health } => (),
-        Mechanic::SetMobColor { color } => (),
-        Mechanic::SetMobScore { objective, score } => (),
-        Mechanic::SetName { name } => (),
-        Mechanic::SetRaiderCanJoinRaid { can_join } => (),
-        Mechanic::SetRaiderPatrolBlock { block } => (),
-        Mechanic::SetRaiderPatrolLeader { leader } => (),
-        Mechanic::SetFaction { faction } => (),
-        Mechanic::SetFlying { flying } => (),
-        Mechanic::SetNoDamageTicks { ticks } => (),
-        Mechanic::SetOwner { owner } => (),
-        Mechanic::SetParent { parent } => (),
-        Mechanic::SetPathfindingMalus { malus } => (),
-        Mechanic::SetPitch { pitch } => (),
-        Mechanic::SetPose { pose } => (),
-        Mechanic::SetRotation { yaw, pitch } => (),
-        Mechanic::SetTarget { target } => (),
-        Mechanic::SetTargetScore { objective, score } => (),
-        Mechanic::SetTextDisplay { text } => (),
-        Mechanic::SetTongueTarget { target } => (),
-        Mechanic::SetScore { objective, score } => (),
-        Mechanic::SetSpeed { speed } => (),
-        Mechanic::SetStance { stance } => (),
-        Mechanic::Shield => (),
-        Mechanic::ShieldBreak => (),
-        Mechanic::ShieldPercent { percent } => (),
-        Mechanic::ShootFireball { velocity } => (),
-        Mechanic::ShootPotion { potion, velocity } => (),
-        Mechanic::ShootSkull { velocity } => (),
-        Mechanic::ShootShulkerBullet { velocity } => (),
-        Mechanic::ShowEntity { entity } => (),
-        Mechanic::Signal { signal } => (),
-        Mechanic::Skybox { skybox } => (),
-        Mechanic::Smoke => (),
-        Mechanic::SmokeSwirl => (),
+        } => {}
+        Mechanic::SetGravity { gravity } => {}
+        Mechanic::SetHealth { health } => {}
+        Mechanic::SetInteractionSize { width, height } => {}
+        Mechanic::SetItemGroupCooldown { group, cooldown } => {}
+        Mechanic::SetDisplayEntityItem { item } => {}
+        Mechanic::SetLeashHolder { holder } => {}
+        Mechanic::SetLevel { level } => {}
+        Mechanic::SetMaterialCooldown { material, cooldown } => {}
+        Mechanic::SetMaxHealth { health } => {}
+        Mechanic::SetMobColor { color } => {}
+        Mechanic::SetMobScore { objective, score } => {}
+        Mechanic::SetName { name } => {}
+        Mechanic::SetRaiderCanJoinRaid { can_join } => {}
+        Mechanic::SetRaiderPatrolBlock { block } => {}
+        Mechanic::SetRaiderPatrolLeader { leader } => {}
+        Mechanic::SetFaction { faction } => {}
+        Mechanic::SetFlying { flying } => {}
+        Mechanic::SetNoDamageTicks { ticks } => {}
+        Mechanic::SetOwner { owner } => {}
+        Mechanic::SetParent { parent } => {}
+        Mechanic::SetPathfindingMalus { malus } => {}
+        Mechanic::SetPitch { pitch } => {}
+        Mechanic::SetPose { pose } => {}
+        Mechanic::SetRotation { yaw, pitch } => {}
+        Mechanic::SetTarget { target } => {}
+        Mechanic::SetTargetScore { objective, score } => {}
+        Mechanic::SetTextDisplay { text } => {}
+        Mechanic::SetTongueTarget { target } => {}
+        Mechanic::SetScore { objective, score } => {}
+        Mechanic::SetSpeed { speed } => {}
+        Mechanic::SetStance { stance } => {}
+        Mechanic::Shield => {}
+        Mechanic::ShieldBreak => {}
+        Mechanic::ShieldPercent { percent } => {}
+        Mechanic::ShootFireball { velocity } => {}
+        Mechanic::ShootPotion { potion, velocity } => {}
+        Mechanic::ShootSkull { velocity } => {}
+        Mechanic::ShootShulkerBullet { velocity } => {}
+        Mechanic::ShowEntity { entity } => {}
+        Mechanic::Signal { signal } => {}
+        Mechanic::Skybox { skybox } => {}
+        Mechanic::Smoke => {}
+        Mechanic::SmokeSwirl => {}
         Mechanic::Sound {
             sound,
             volume,
             pitch,
-        } => (),
-        Mechanic::StealItem { item } => (),
-        Mechanic::StopSound { sound } => (),
+        } => {}
+        Mechanic::StealItem { item } => {}
+        Mechanic::StopSound { sound } => {}
         Mechanic::StopSoundWithCategory {
             sound,
             sound_category,
-        } => (),
+        } => {}
         Mechanic::Speak {
             offset,
             radius,
@@ -1147,16 +1392,16 @@ fn process_mechanic_ui(ui: &mut egui::Ui, mechanic: &mut Mechanic) {
             chat_prefix,
             duration,
             send_chat_message,
-        } => (),
-        Mechanic::Spin { velocity, aura } => (),
+        } => {}
+        Mechanic::Spin { velocity, aura } => {}
         Mechanic::Spring {
             spring_type,
             duration,
-        } => (),
-        Mechanic::Stun { duration } => (),
-        Mechanic::StopUsingItem => (),
-        Mechanic::Suicide => (),
-        Mechanic::Summon { mob, location } => (),
+        } => {}
+        Mechanic::Stun { duration } => {}
+        Mechanic::StopUsingItem => {}
+        Mechanic::Suicide => {}
+        Mechanic::Summon { mob, location } => {}
         Mechanic::SummonAreaEffectCloud {
             particle,
             effect_type,
@@ -1167,33 +1412,33 @@ fn process_mechanic_ui(ui: &mut egui::Ui, mechanic: &mut Mechanic) {
             radius,
             radius_reduction_on_use,
             radius_reduction_on_tick,
-        } => (),
-        Mechanic::SummonFallingBlock { material } => (),
-        Mechanic::SummonPassenger { passenger, stack } => (),
-        Mechanic::Swap => (),
-        Mechanic::SwingOffHand => (),
-        Mechanic::AddTag(_) => (),
-        Mechanic::RemoveTag(_) => (),
+        } => {}
+        Mechanic::SummonFallingBlock { material } => {}
+        Mechanic::SummonPassenger { passenger, stack } => {}
+        Mechanic::Swap => {}
+        Mechanic::SwingOffHand => {}
+        Mechanic::AddTag(_) => {}
+        Mechanic::RemoveTag(_) => {}
         Mechanic::TakeItem {
             item,
             amount,
             exact,
             vanilla_only,
-        } => (),
-        Mechanic::Taunt => (),
+        } => {}
+        Mechanic::Taunt => {}
         Mechanic::Teleport {
             spreadh,
             spreadv,
             preserve_pitch,
             preserve_yaw,
             safe_teleport,
-        } => (),
-        Mechanic::TeleportY { y } => (),
+        } => {}
+        Mechanic::TeleportY { y } => {}
         Mechanic::TeleportIn {
             vector,
             yaw,
             target_as_origin,
-        } => (),
+        } => {}
         Mechanic::TeleportTo {
             location,
             world,
@@ -1201,45 +1446,449 @@ fn process_mechanic_ui(ui: &mut egui::Ui, mechanic: &mut Mechanic) {
             pitch,
             relative,
             target_as_origin,
-        } => (),
+        } => {}
         Mechanic::Time {
             mode,
             amount,
             personal,
             relative,
-        } => (),
-        Mechanic::Threat { amount, mode } => (),
+        } => {}
+        Mechanic::Threat { amount, mode } => {
+            ui.horizontal(|ui| {
+                ui.label(t!("Amount")).on_hover_ui(|ui| {
+                    ui.label(t!(
+                        "The amount of threat to give the target. Can be negative."
+                    ));
+                });
+                ui.add(egui::DragValue::new(amount).speed(1.0));
+                ui.label(t!("Mode")).on_hover_ui(|ui| {
+                    ui.label(t!(
+                        "Add / Remove / Multiply / Divide / Set / Reset / Forcetop"
+                    ));
+                });
+                egui::ComboBox::from_label("Mode")
+                    .selected_text(mode.to_string())
+                    .show_ui(ui, |ui| {
+                        ThreatMode::VARIANTS.iter().for_each(|v| {
+                            ui.selectable_value(
+                                mode,
+                                MythicOption::Some(String::new(), v.clone(), String::new()),
+                                v.to_string(),
+                            );
+                        });
+                    })
+            });
+        }
         Mechanic::Throw {
             velocity,
             velocity_y,
             from_origin,
-        } => (),
-        Mechanic::ThunderLevel { level } => (),
+        } => {
+            ui.horizontal(|ui| {
+                ui.label(t!("Velocity")).on_hover_ui(|ui| {
+                    ui.label(t!("The horizontal velocity at which the entity is throw"));
+                });
+                ui.add(egui::DragValue::new(velocity).speed(1.0));
+                ui.label(t!("Velocity Y")).on_hover_ui(|ui| {
+                    ui.label(t!("Velocity Y"));
+                });
+                ui.add(egui::DragValue::new(velocity_y).speed(1.0));
+                if let Some((_, from_origin, _)) = from_origin.some() {
+                    ui.checkbox(from_origin, t!("From Origin"));
+                } else if ui.button(t!("Add From Origin")).clicked() {
+                    *from_origin = MythicOption::Some(String::new(), false, String::new());
+                }
+            });
+        }
+        Mechanic::ThunderLevel { level } => {
+            ui.horizontal(|ui| {
+                ui.label(t!("Level")).on_hover_ui(|ui| {
+                    ui.label(t!("The type of the effect. Either 0 or 1"));
+                });
+                egui::ComboBox::new("Thunder_level_Combobox", "")
+                    .selected_text(level.to_string())
+                    .show_ui(ui, |ui| {
+                        use crate::skill::mechanics::ThunderLevel;
+                        ThunderLevel::VARIANTS.iter().for_each(|v| {
+                            ui.selectable_value(level, v.clone(), v.to_string());
+                        });
+                    });
+            });
+        }
         Mechanic::ToggleLever {
             location,
             duration,
             x,
             y,
             z,
-        } => (),
-        Mechanic::TogglePiston => (),
-        Mechanic::ToggleSitting(_) => (),
-        Mechanic::TotemOfUndying { model } => (),
-        Mechanic::TrackLocation => (),
-        Mechanic::UndoPaste { paste_id } => (),
+        } => {
+            ui.horizontal(|ui| {
+                ui.label(t!("Location")).on_hover_ui(|ui| {ui.label(t!("Location of the action, in a x,y,z syntax. If set, other location attributes are ignored"));
+                })});
+            if let Some((_, l, _)) = location.some() {
+                ui.horizontal(|ui| {
+                    ui.label(t!("X"));
+                    ui.add(egui::DragValue::new(&mut l.x));
+                });
+                ui.horizontal(|ui| {
+                    ui.label(t!("Y"));
+                    ui.add(egui::DragValue::new(&mut l.y));
+                });
+                ui.horizontal(|ui| {
+                    ui.label(t!("Z"));
+                    ui.add(egui::DragValue::new(&mut l.z));
+                });
+            } else {
+                ui.label(t!("XYZ"));
+                if ui.button(t!("Add")).clicked() {
+                    use crate::skill::mechanics::Xyz;
+                    *location =
+                        MythicOption::Some(String::from("loc="), Xyz::default(), String::from(";"))
+                }
+            }
+            ui.horizontal(|ui| {
+                ui.label(t!("Duration")).on_hover_ui(|ui| {
+                    ui.label(t!(
+                        "duration (in ticks) the lever should remain toggled on."
+                    ));
+                });
+                ui.add(egui::DragValue::new(duration));
+            });
+            ui.horizontal(|ui| {
+                ui.label(t!("X")).on_hover_ui(|ui| {
+                    ui.label(t!("The X coordinate of the button."));
+                });
+                if let Some((_, x, _)) = x.some() {
+                    ui.add(egui::DragValue::new(x).speed(1.0));
+                } else if ui.button(t!("Add")).clicked() {
+                    *x = MythicOption::Some(";x=".to_string(), 0, String::new());
+                }
+            });
+            ui.horizontal(|ui| {
+                ui.label(t!("Y")).on_hover_ui(|ui| {
+                    ui.label(t!("The Y coordinate of the button."));
+                });
+                if let Some((_, y, _)) = y.some() {
+                    ui.add(egui::DragValue::new(y).speed(1.0));
+                } else if ui.button(t!("Add")).clicked() {
+                    *y = MythicOption::Some(";y".to_string(), 0, "".to_string());
+                }
+            });
+            ui.horizontal(|ui| {
+                ui.label(t!("Z")).on_hover_ui(|ui| {
+                    ui.label(t!("The Z coordinate of the button."));
+                });
+                if let Some((_, z, _)) = z.some() {
+                    ui.add(egui::DragValue::new(z).speed(1.0));
+                } else if ui.button(t!("Add")).clicked() {
+                    *z = MythicOption::Some(";x=".to_string(), 0, "".to_string());
+                }
+            });
+        }
+        Mechanic::TogglePiston => {}
+        Mechanic::ToggleSitting(b) => {
+            ui.horizontal(|ui| {
+                ui.label(t!(
+                    "Toggles the sitting state for cats, dogs, foxes, and parrots."
+                ));
+                ui.checkbox(b, "");
+            });
+        }
+        Mechanic::TotemOfUndying { model } => {
+            ui.horizontal(|ui| {
+                ui.label(t!("Model")).on_hover_ui(|ui| {
+                    ui.label(t!("The CustomModelData to use for the shown totem"));
+                });
+                ui.text_edit_singleline(model);
+            });
+        }
+        Mechanic::TrackLocation => {}
+        Mechanic::UndoPaste { paste_id } => {
+            ui.horizontal(|ui| {
+                ui.label(t!("Paste ID")).on_hover_ui(|ui| {
+                    ui.label(t!("The id of the paste that needs to be undone"));
+                });
+                ui.text_edit_singleline(paste_id);
+            });
+        }
         Mechanic::Velocity {
             mode,
             velocity_x,
             velocity_y,
             velocity_z,
             relative,
-        } => (),
-        Mechanic::WolfSit(_) => (),
-        Mechanic::WorldEditReplace { from, to } => (),
+        } => {
+            ui.horizontal(|ui| {
+                ui.label(t!("Mode")).on_hover_ui(|ui| {
+                    ui.label(t!(
+                        "The operation to perform. Can be SET, ADD, REMOVE, DIVIDE, or MULTIPLY."
+                    ));
+                });
+                egui::ComboBox::new("Mode_ComboBox", "")
+                    .selected_text(mode.to_string())
+                    .show_ui(ui, |ui| {
+                        VelocityMode::VARIANTS.iter().for_each(|v| {
+                            ui.selectable_value(mode, v.clone(), v.to_string());
+                        });
+                    });
+            });
+            ui.horizontal(|ui| {
+                ui.label(t!("Velocity X")).on_hover_ui(|ui| {
+                    ui.label(t!("Velocity on the x-axis. Can be negative."));
+                });
+                ui.add(
+                    egui::DragValue::new(velocity_x)
+                        .speed(1.0)
+                        .range(-1000..=1000),
+                )
+            });
+            ui.horizontal(|ui| {
+                ui.label(t!("Velocity Y")).on_hover_ui(|ui| {
+                    ui.label(t!("Velocity on the y-axis. Can be negative."));
+                });
+                ui.add(
+                    egui::DragValue::new(velocity_y)
+                        .speed(1.0)
+                        .range(-1000..=1000),
+                )
+            });
+            ui.horizontal(|ui| {
+                ui.label(t!("Velocity Z")).on_hover_ui(|ui| {
+                    ui.label(t!("Velocity on the z-axis. Can be negative."));
+                });
+                ui.add(
+                    egui::DragValue::new(velocity_z)
+                        .speed(1.0)
+                        .range(-1000..=1000),
+                )
+            });
+            ui.horizontal(|ui| {
+                ui.label(t!("Relative")).on_hover_ui(|ui| {ui.label(t!("If the change in velocity should be relative to the target's facing direction. In this instance, the z axis becomes forward/backward, y becomes up/down and x becomes left/right"));});
+                if let Some((_,b,_)) = relative.some() {
+                    ui.checkbox(b, "");
+                } else if ui.button(t!("Add")).clicked() {
+                        *relative = MythicOption::Some("r=".to_owned(), false,String::new())
+                }
+            });
+        }
+        Mechanic::WolfSit(b) => {
+            ui.checkbox(b, t!("Sitting"));
+        }
+        Mechanic::WorldEditReplace { from, to } => {
+            egui::Grid::new(2).show(ui, |ui| {
+                ui.label(t!("From"));
+                ui.text_edit_singleline(from);
+
+                ui.end_row();
+
+                ui.label(t!("To"));
+                ui.text_edit_singleline(to);
+            });
+        }
+
         Mechanic::Weather {
             weather_type,
             duration,
-        } => (),
-        Mechanic::AdditionalMecanics { mechanic_type } => (),
+        } => {}
+        Mechanic::Attribute {
+            attribute,
+            amount,
+            duration,
+        } => {
+            ui.horizontal(|ui| {
+                ui.label(t!("Attribute")).on_hover_ui(|ui| {
+                    ui.label(t!("The attribute to set"));
+                });
+                ui.text_edit_singleline(attribute);
+                ui.label(t!("Amount")).on_hover_ui(|ui| {
+                    ui.label(t!("The amount of the attribute"));
+                });
+                ui.add(egui::DragValue::new(amount).speed(0.1));
+            });
+            ui.horizontal(|ui| {
+                ui.label(t!("Duration")).on_hover_ui(|ui| {
+                    ui.label(t!("The duration of the attribute"));
+                });
+                if let Some((_, duration, _)) = duration.some() {
+                    ui.add(egui::DragValue::new(duration));
+                } else if ui.button(t!("Add Duration")).clicked() {
+                    *duration = MythicOption::Some(";duration=".to_owned(), 0, String::new());
+                }
+            });
+        }
+        Mechanic::AttributeModifier {
+            attribute,
+            operation,
+            name,
+            amount,
+            duration,
+        } => {
+            ui.horizontal(|ui| {
+                ui.label(t!("Attribute")).on_hover_ui(|ui| {
+                    ui.label(t!("The attribute to modify"));
+                });
+                ui.text_edit_singleline(attribute);
+                ui.label(t!("Operation")).on_hover_ui(|ui| {
+                    ui.label(t!("The operation to perform"));
+                });
+                egui::ComboBox::new("Attribute_Operation", "")
+                    .selected_text(operation.to_string())
+                    .show_ui(ui, |ui| {
+                        AttributeOperation::VARIANTS.iter().for_each(|v| {
+                            ui.selectable_value(operation, v.clone(), v.to_string());
+                        });
+                    });
+            });
+            ui.horizontal(|ui| {
+                ui.label(t!("Name")).on_hover_ui(|ui| {
+                    ui.label(t!("The name of the modifier"));
+                });
+                ui.text_edit_singleline(name);
+                ui.label(t!("Amount")).on_hover_ui(|ui| {
+                    ui.label(t!("The modifier of the attribute"));
+                });
+                ui.add(egui::DragValue::new(amount).speed(0.1));
+            });
+            ui.horizontal(|ui| {
+                ui.label(t!("Duration")).on_hover_ui(|ui| {
+                    ui.label(t!("The duration of the attribute"));
+                });
+                if let Some((_, duration, _)) = duration.some() {
+                    ui.add(egui::DragValue::new(duration));
+                } else if ui.button(t!("Add Duration")).clicked() {
+                    *duration = MythicOption::Some(";duration=".to_owned(), 0, String::new());
+                }
+            });
+        }
+        Mechanic::BarCreate {
+            name,
+            display,
+            value,
+            color,
+            style,
+        }
+        | Mechanic::BarSet {
+            name,
+            display,
+            value,
+            color,
+            style,
+        } => {
+            ui.horizontal(|ui| {
+                ui.label(t!("Name")).on_hover_ui(|ui| {
+                    ui.label(t!("The name of the bossbar"));
+                });
+                ui.text_edit_singleline(name);
+            });
+            ui.horizontal(|ui| {
+                ui.label(t!("Display")).on_hover_ui(|ui| {
+                    ui.label(t!("The text displayed on the bar"));
+                });
+                ui.text_edit_singleline(display);
+            });
+            ui.horizontal(|ui| {
+                ui.label(t!("Value")).on_hover_ui(|ui| {
+                    ui.label(t!("How filled the bossbar is. Must be between 0.0 and 1.0"));
+                });
+                ui.add(egui::DragValue::new(value).speed(0.01).range(0.0..=1.0));
+            });
+            ui.horizontal(|ui| {
+                ui.label(t!("Color")).on_hover_ui(|ui| {
+                    ui.label(t!("The color of the bossbar"));
+                });
+                egui::ComboBox::new("Bar_Color", "")
+                    .selected_text(color.to_string())
+                    .show_ui(ui, |ui| {
+                        BarColor::VARIANTS.iter().for_each(|v| {
+                            ui.selectable_value(color, v.clone(), v.to_string());
+                        });
+                    });
+                ui.label(t!("Style")).on_hover_ui(|ui| {
+                    ui.label(t!("The style of the bossbar"));
+                });
+                egui::ComboBox::new("Bar_Style", "")
+                    .selected_text(style.to_string())
+                    .show_ui(ui, |ui| {
+                        BarStyle::VARIANTS.iter().for_each(|v| {
+                            ui.selectable_value(style, v.clone(), v.to_string());
+                        });
+                    });
+            });
+        }
+        Mechanic::BarRemove { name } => {
+            ui.horizontal(|ui| {
+                ui.label(t!("Name")).on_hover_ui(|ui| {
+                    ui.label(t!("The name of the bossbar to remove"));
+                });
+                ui.text_edit_singleline(name);
+            });
+        }
+        Mechanic::ClearTarget => {}
+        Mechanic::Fear => {}
+        Mechanic::OpenCustomMenu { menu } => {
+            ui.horizontal(|ui| {
+                ui.label(t!("Menu")).on_hover_ui(|ui| {
+                    ui.label(t!("The menu to open"));
+                });
+                ui.text_edit_singleline(menu);
+            });
+        }
+        Mechanic::SetCustomMenuButton { slot, icon } => {
+            ui.horizontal(|ui| {
+                ui.label(t!("Slot")).on_hover_ui(|ui| {
+                    ui.label(t!("The slot to modify"));
+                });
+                ui.add(egui::DragValue::new(slot));
+                ui.label(t!("Icon")).on_hover_ui(|ui| {
+                    ui.label(t!("The button to set on the slot"));
+                });
+                ui.text_edit_singleline(icon);
+            });
+        }
+        Mechanic::SetSulfurCubeArchetype { archetype } => {
+            ui.horizontal(|ui| {
+                ui.label(t!("Archetype")).on_hover_ui(|ui| {
+                    ui.label(t!("The archetype of the sulfur cube"));
+                });
+                egui::ComboBox::new("Sulfur_Cube_Archetype", "")
+                    .selected_text(archetype.to_string())
+                    .show_ui(ui, |ui| {
+                        SulfurCubeArchetype::VARIANTS.iter().for_each(|v| {
+                            ui.selectable_value(archetype, v.clone(), v.to_string());
+                        });
+                    });
+            });
+        }
+        Mechanic::TickRate {
+            rate,
+            duration,
+            reset,
+        } => {
+            ui.horizontal(|ui| {
+                ui.label(t!("Rate")).on_hover_ui(|ui| {
+                    ui.label(t!("The tick rate of the target, from 1 (slowest) to 20 (normal). 0 stops the target"));
+                });
+                ui.add(
+                    egui::DragValue::new(rate)
+                        .speed(0.1)
+                        .range(0.0..=20.0),
+                );
+                ui.label(t!("Duration")).on_hover_ui(|ui| {
+                    ui.label(t!("How long the change lasts. 0 keeps it until a reset"));
+                });
+                ui.add(egui::DragValue::new(duration));
+            });
+            ui.horizontal(|ui| {
+                ui.label(t!("Reset")).on_hover_ui(|ui| {
+                    ui.label(t!("Puts the target back to normal"));
+                });
+                if let Some((_, reset, _)) = reset.some() {
+                    ui.checkbox(reset, "");
+                } else if ui.button(t!("Add Reset")).clicked() {
+                    *reset = MythicOption::Some(";reset=".to_owned(), false, String::new());
+                }
+            });
+        }
+        Mechanic::AdditionalMecanics { mechanic_type } => {}
     }
 }

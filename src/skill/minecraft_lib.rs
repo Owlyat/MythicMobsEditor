@@ -10,6 +10,7 @@ use strum::{Display, EnumString, IntoStaticStr, VariantArray};
     IntoStaticStr,
     PartialEq,
     Clone,
+    Default,
 )]
 pub enum MinecraftMob {
     #[strum(to_string = "MetaSkill")]
@@ -311,6 +312,7 @@ pub enum MinecraftMob {
     #[strum(serialize = "Zoglin", to_string = "Zoglin")]
     Zoglin,
     #[strum(serialize = "Zombie", to_string = "Zombie")]
+    #[default]
     Zombie,
     #[strum(serialize = "ZombieHorse", to_string = "ZombieHorse")]
     ZombieHorse,
@@ -318,10 +320,4 @@ pub enum MinecraftMob {
     ZombieVillager,
     #[strum(serialize = "ZombifiedPiglin", to_string = "ZombifiedPiglin")]
     ZombifiedPiglin,
-}
-
-impl Default for MinecraftMob {
-    fn default() -> Self {
-        MinecraftMob::Zombie
-    }
 }

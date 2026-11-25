@@ -1,4 +1,10 @@
-use crate::skill::{Skill, minecraft_lib::MinecraftMob, targeters::Targeter, triggers::Trigger};
+use crate::skill::{
+    Skill,
+    mechanics::{MythicOption, Xyz},
+    minecraft_lib::MinecraftMob,
+    targeters::Targeter,
+    triggers::Trigger,
+};
 
 #[derive(Default)]
 pub struct AppState {
@@ -11,6 +17,17 @@ pub struct AppState {
     pub selected_skill: Option<usize>,
     pub skills: Vec<Skill>,
     pub output: String,
+    pub mob_type_filter: String,
+    pub locale: Locale,
+}
+
+#[derive(strum::Display, Default, PartialEq, strum::EnumIter, Clone)]
+pub enum Locale {
+    #[default]
+    #[strum(to_string = "en")]
+    EN,
+    #[strum(to_string = "fr")]
+    FR,
 }
 
 impl AppState {
@@ -144,7 +161,47 @@ impl AppState {
             if let Some(mech) = &sk.mechanic {
                 skills_fmt.push_str(&format!(
                     "\n  {}{}{}",
-                    mech,
+                    match mech {
+                        crate::skill::mechanics::Mechanic::ToggleLever {
+                            location,
+                            duration,
+                            x,
+                            y,
+                            z,
+                        } => {
+                            if location.clone().some().is_none()
+                                && x.clone().some().is_none()
+                                    | y.clone().some().is_none()
+                                    | z.clone().some().is_none()
+                            {
+                                let location = if location.clone().some().is_none() {
+                                    let mut xyz = Xyz::default();
+                                    if let Some((_, x, _)) = x.clone().some() {
+                                        xyz.x = *x;
+                                    }
+                                    if let Some((_, y, _)) = y.clone().some() {
+                                        xyz.y = *y;
+                                    }
+                                    if let Some((_, z, _)) = z.clone().some() {
+                                        xyz.z = *z;
+                                    }
+                                    MythicOption::Some("".to_string(), xyz, "".to_string())
+                                } else {
+                                    location.clone()
+                                };
+                                crate::skill::mechanics::Mechanic::ToggleLever {
+                                    location,
+                                    duration: *duration,
+                                    x: x.clone(),
+                                    y: y.clone(),
+                                    z: z.clone(),
+                                }
+                            } else {
+                                mech.clone()
+                            }
+                        }
+                        _ => mech.clone(),
+                    },
                     if let Targeter::None = sk.targeter {
                         "".to_owned()
                     } else {

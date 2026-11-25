@@ -130,6 +130,34 @@ pub enum Trigger {
     ///When a mob's special projectile hits a block
     ProjectileLand,
 
+    #[strum(to_string = "~onDismounted")]
+    ///When the mob is dismounted from
+    Dismounted,
+
+    #[strum(to_string = "~onCinematicStart")]
+    ///When a cinematic camera path begins playing on a player
+    CinematicStart,
+
+    #[strum(to_string = "~onCinematicEnd")]
+    ///When a cinematic camera path ends on a player (finish, cancel, quit, or death)
+    CinematicEnd,
+
+    #[strum(to_string = "~onEnterBounds")]
+    ///When the mob moves into a defined region
+    EnterBounds,
+
+    #[strum(to_string = "~onExitBounds")]
+    ///When the mob moves out of a defined region
+    ExitBounds,
+
+    #[strum(to_string = "~onPlayerEnter")]
+    ///When a player moves into a defined region
+    PlayerEnter,
+
+    #[strum(to_string = "~onPlayerExit")]
+    ///When a player moves out of a defined region
+    PlayerExit,
+
     #[strum(to_string = "")]
     #[default]
     None,
@@ -169,7 +197,61 @@ impl Trigger {
             Trigger::Hear => "Hear",
             Trigger::ProjectileHit => "Projectile Hit",
             Trigger::ProjectileLand => "Projectile Land",
+            Trigger::Dismounted => "Dismounted",
+            Trigger::CinematicStart => "Cinematic Start",
+            Trigger::CinematicEnd => "Cinematic End",
+            Trigger::EnterBounds => "Enter Bounds",
+            Trigger::ExitBounds => "Exit Bounds",
+            Trigger::PlayerEnter => "Player Enter",
+            Trigger::PlayerExit => "Player Exit",
             Trigger::None => "None",
+        }
+    }
+
+    /// A short plain-text description of when this trigger fires.
+    pub fn get_desc(&self) -> impl Into<String> {
+        match self {
+            Trigger::Combat => "Default: when the mob deals or takes damage, spawns, or dies",
+            Trigger::Attack => "When the mob hits something",
+            Trigger::Damaged => "When the mob is damaged",
+            Trigger::Spawn => "When the mob spawns",
+            Trigger::Despawn => "When the mob is despawned",
+            Trigger::Ready => "Triggered the first time a mob is spawned from a spawner",
+            Trigger::Load => "When the mob is loaded after a server restart",
+            Trigger::SpawnOrLoad => "When the mob either spawns or loads",
+            Trigger::Death => "When the mob dies",
+            Trigger::Timer => "Every # ticks (where # is the interval in ticks)",
+            Trigger::Interact => "When the mob is right-clicked",
+            Trigger::PlayerKill => "When the mob kills a player",
+            Trigger::EnterCombat => "When the mob enters combat (requires threat tables be on)",
+            Trigger::DropCombat => "When the mob leaves combat (requires threat tables be on)",
+            Trigger::ChangeTarget => "When the mob changes targets (requires threat tables be on)",
+            Trigger::Explode => "When the mob explodes (typically only used for creepers)",
+            Trigger::Prime => "When the creeper charges up for an explosion",
+            Trigger::CreeperCharge => "When the creeper is charged (when lightning hits a creeper)",
+            Trigger::Teleport => "When the mob teleports (typically only used for endermen)",
+            Trigger::Signal => "When the mob receives a signal",
+            Trigger::Shoot => "When the mob fires a projectile",
+            Trigger::BowHit => "When the mob's fired projectile hits an entity",
+            Trigger::Tame => "When the mob gets tamed",
+            Trigger::Breed => "When the mob breeds with another mob",
+            Trigger::Trade => "When the Villager completes a trade. Requires Paper",
+            Trigger::ChangeWorld => "When the mob changes world",
+            Trigger::Bucket => "When the cow is milked or an entity is bucketed (axolotl etc.)",
+            Trigger::SkillDamage => "When the mob deals damage to other entities via a mechanic",
+            Trigger::Hear => "When the mob hears a sound, if enabled",
+            Trigger::ProjectileHit => "When a mob's special projectile hits an entity",
+            Trigger::ProjectileLand => "When a mob's special projectile hits a block",
+            Trigger::Dismounted => "When the mob is dismounted from",
+            Trigger::CinematicStart => "When a cinematic camera path begins playing on a player",
+            Trigger::CinematicEnd => {
+                "When a cinematic camera path ends on a player (finish, cancel, quit, or death)"
+            }
+            Trigger::EnterBounds => "When the mob moves into a defined region",
+            Trigger::ExitBounds => "When the mob moves out of a defined region",
+            Trigger::PlayerEnter => "When a player moves into a defined region",
+            Trigger::PlayerExit => "When a player moves out of a defined region",
+            Trigger::None => "No trigger (the skill is not attached to an event)",
         }
     }
 }
