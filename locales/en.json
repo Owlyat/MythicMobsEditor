@@ -875,6 +875,7 @@
   "source": "source",
   "Language": "Language",
   "Preview": "Preview",
+  "Export": "Export",
   "Internal Name": "Internal Name",
   "Internal Skill Name": "Internal Skill Name",
   "Spawner": "Spawner",
@@ -890,5 +891,12 @@
   "Add Tag": "Add Tag",
   "Remove Tag": "Remove Tag",
   "Toggle Sitting": "Toggle Sitting",
-  "Wolf Sit": "Wolf Sit"
+  "Wolf Sit": "Wolf Sit",
+  "Copy YAML": "Copy YAML",
+  "Copied to clipboard": "Copied to clipboard",
+  "Saved successfully": "Saved successfully",
+  "Export failed": "Export failed",
+  "Import": "Import",
+  "Imported successfully": "Imported successfully",
+  "Import failed": "Import failed"
 }

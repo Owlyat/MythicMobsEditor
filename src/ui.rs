@@ -34,6 +34,66 @@ impl eframe::App for Ui {
                 if ui.add(Button::new(t!("Preview"))).clicked() {
                     self.state.create_config();
                 }
+                if ui.add(Button::new(t!("Export"))).clicked() {
+                    self.state.create_config();
+                    self.state.status_message = None;
+
+                    let mut file_name = self.state.mob_name.clone();
+                    for c in ['<', '>', ':', '"', '/', '\\', '|', '?', '*', '\n', '\r', '\t'] {
+                        file_name = file_name.replace(c, "_");
+                    }
+                    file_name = file_name.trim_end_matches(['.', ' ']).to_owned();
+                    if file_name.is_empty() {
+                        file_name = "Default_Mob_Name".to_owned();
+                    }
+
+                    if let Some(path) = rfd::FileDialog::new()
+                        .set_file_name(format!("{file_name}.yml"))
+                        .add_filter("YAML", &["yml", "yaml"])
+                        .save_file()
+                    {
+                        let path = if path.extension().is_none() {
+                            path.with_extension("yml")
+                        } else {
+                            path
+                        };
+
+                        let mut contents = self.state.output.clone();
+                        if !contents.ends_with('\n') {
+                            contents.push('\n');
+                        }
+
+                        self.state.status_message = match std::fs::write(&path, contents) {
+                            Ok(()) => Some((
+                                false,
+                                format!("{}: {}", t!("Saved successfully"), path.display()),
+                            )),
+                            Err(err) => Some((
+                                true,
+                                format!("{}: {}", t!("Export failed"), err),
+                            )),
+                        };
+                    }
+                }
+                if ui.add(Button::new(t!("Import"))).clicked() {
+                    self.state.status_message = None;
+                    if let Some(path) = rfd::FileDialog::new()
+                        .add_filter("YAML", &["yml", "yaml"])
+                        .pick_file()
+                    {
+                        let result = std::fs::read_to_string(&path)
+                            .map_err(|err| err.to_string())
+                            .and_then(|text| self.state.import_config(&text));
+
+                        self.state.status_message = Some(match result {
+                            Ok(()) => (
+                                false,
+                                format!("{}: {}", t!("Imported successfully"), path.display()),
+                            ),
+                            Err(err) => (true, format!("{}: {}", t!("Import failed"), err)),
+                        });
+                    }
+                }
                 ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
                     let current = LANGUAGES
                         .iter()
@@ -299,8 +359,29 @@ Each trigger starts with a on string. That string is case sensitive, so make sur
             }
         });
         egui::Panel::bottom("output_yaml_panel").show(ui, |ui| {
-            if self.state.output.is_empty() {
-            } else {
+            ui.horizontal(|ui| {
+                if !self.state.output.is_empty() && ui.button(t!("Copy YAML")).clicked() {
+                    ui.ctx().copy_text(self.state.output.clone());
+                    self.state.status_message =
+                        Some((false, t!("Copied to clipboard").to_string()));
+                }
+            });
+
+            let mut clear_message = false;
+            if let Some((is_error, message)) = &self.state.status_message {
+                ui.horizontal_wrapped(|ui| {
+                    let color = if *is_error { Color32::RED } else { Color32::GREEN };
+                    ui.colored_label(color, message);
+                    if ui.small_button("✕").clicked() {
+                        clear_message = true;
+                    }
+                });
+            }
+            if clear_message {
+                self.state.status_message = None;
+            }
+
+            if !self.state.output.is_empty() {
                 ui.add(egui::TextEdit::multiline(&mut self.state.output.clone()).code_editor());
             }
         });

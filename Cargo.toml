@@ -16,6 +16,8 @@ eframe = { version = "0.37.0", default-features = false, features = [
     "x11",
 ] }
 egui = "0.37.0"
+rfd = "0.18.0"
 rust-i18n = "4.2"
 serde = { version = "1.0.229", features = ["derive"] }
+serde_norway = "0.9"
 strum = { version = "0.28.0", features = ["derive"] }

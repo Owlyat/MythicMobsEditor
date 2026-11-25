@@ -875,6 +875,7 @@
   "source": "Source",
   "Language": "Langue",
   "Preview": "Aperçu",
+  "Export": "Exporter",
   "Internal Name": "Nom interne",
   "Internal Skill Name": "Nom interne de la compétence",
   "Spawner": "Spawner",
@@ -890,5 +891,12 @@
   "Add Tag": "Ajouter un tag",
   "Remove Tag": "Retirer un tag",
   "Toggle Sitting": "Basculer l'assise",
-  "Wolf Sit": "Faire asseoir le loup"
+  "Wolf Sit": "Faire asseoir le loup",
+  "Copy YAML": "Copier le YAML",
+  "Copied to clipboard": "Copié dans le presse-papiers",
+  "Saved successfully": "Enregistré avec succès",
+  "Export failed": "Échec de l'export",
+  "Import": "Importer",
+  "Imported successfully": "Importé avec succès",
+  "Import failed": "Échec de l'import"
 }
